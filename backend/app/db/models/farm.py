@@ -79,10 +79,8 @@ class Farm(Base):
     )
 
     __table_args__ = (
-        # GIST index on the geometry column for fast spatial queries
-        Index("ix_farms_location_gist", "location", postgresql_using="gist")
-        if _HAS_GEOALCHEMY else (),
-    )
+        Index("ix_farms_location_gist", "location", postgresql_using="gist"),
+    ) if _HAS_GEOALCHEMY else ()
 
     def __repr__(self) -> str:
         return f"<Farm id={self.id!r} name={self.name!r} district={self.district!r}>"
