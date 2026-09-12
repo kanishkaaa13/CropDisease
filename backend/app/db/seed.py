@@ -68,10 +68,11 @@ SAMPLE_IMAGES = [
 ]
 
 
-def seed_database():
+def seed_database(db_url: str | None = None):
     """Execute the full database seed process."""
-    print("Connecting to database...")
-    engine = create_engine(settings.db_url)
+    target_url = db_url or settings.db_url
+    print(f"Connecting to database: {target_url}...")
+    engine = create_engine(target_url)
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     session = Session()
