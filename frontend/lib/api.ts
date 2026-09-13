@@ -1,6 +1,6 @@
 /**
- * API client for KrushiRakshak AI backend.
- * Uses the NEXT_PUBLIC_API_URL env variable set in .env.local.
+ * API Client for KrushiRakshak AI Next.js Frontend.
+ * Connects to FastAPI backend endpoints.
  */
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -27,20 +27,63 @@ export interface HealthResponse {
   db_connected: boolean;
 }
 
-export interface WeatherResponse {
-  temperature: number;
-  humidity: number;
-  wind_speed: number;
-  description: string;
-  risk_level: "low" | "medium" | "high";
+export interface TopPrediction {
+  label: string;
+  confidence: number;
 }
 
-export interface DiseaseDetectionResponse {
-  disease_name: string;
+export interface ScanResponse {
+  label: string;
   confidence: number;
-  severity: string;
-  advisory: string;
-  report_id?: string;
+  top3: TopPrediction[];
+  severity_estimate: number;
+  severity_pct: number;
+  gradcam_image_base64: string;
+  low_confidence: boolean;
+}
+
+export interface RiskWhyFactor {
+  factor: string;
+  details: string;
+  impact_score: number;
+}
+
+export interface RiskForecastDay {
+  day: string;
+  date: string;
+  predicted_risk_score: number;
+  risk_level: string;
+  temp_max: number;
+  rain_mm: number;
+}
+
+export interface RiskScoreResponse {
+  crop_id: string;
+  overall_score: number;
+  risk_level: "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
+  disease_risk: number;
+  pest_risk: number;
+  weather_risk: number;
+  why: RiskWhyFactor[];
+  forecast: RiskForecastDay[];
+}
+
+export interface AdvisoryTreatments {
+  chemical: string[];
+  organic: string[];
+  cultural: string[];
+}
+
+export interface AdvisoryResponse {
+  disease_label: string;
+  disease_name_formatted: str;
+  severity_pct: number;
+  severity_category: string;
+  crop_name: string;
+  growth_stage: string;
+  language: string;
+  treatments: AdvisoryTreatments;
+  urgency_level: string;
 }
 
 export interface OfficerDashboardStats {
@@ -48,6 +91,28 @@ export interface OfficerDashboardStats {
   high_severity_count: number;
   affected_districts: number;
   top_diseases: { name: string; count: number }[];
+}
+
+export interface DistrictRiskMapItem {
+  district: string;
+  total_farms: number;
+  high_risk_crops: number;
+  avg_risk_score: number;
+  risk_level: string;
+}
+
+export interface ValidationItem {
+  ai_result_id: string;
+  observation_id: string;
+  disease_label: string;
+  confidence: number;
+  severity_pct: number;
+  image_urls: string[];
+  crop_name: string;
+  farm_name: string;
+  district: string;
+  timestamp: string;
+  is_validated: boolean;
 }
 
 export interface AdminCommandStats {
@@ -63,22 +128,52 @@ export interface AdminCommandStats {
 export const api = {
   health: () => apiFetch<HealthResponse>("/api/health"),
 
-  detectDisease: (formData: FormData) =>
-    fetch(`${BASE_URL}/api/farmer/detect`, { method: "POST", body: formData })
-      .then((r) => r.json() as Promise<DiseaseDetectionResponse>),
+  scanImage: (formData: FormData) =>
+    fetch(`${BASE_URL}/api/scan`, { method: "POST", body: formData }).then((r) => {
+      if (!r.ok) throw new Error(`Scan failed: ${r.statusText}`);
+      return r.json() as Promise<ScanResponse>;
+    }),
 
-  getWeather: (lat: number, lon: number) =>
-    apiFetch<WeatherResponse>(`/api/farmer/weather?lat=${lat}&lon=${lon}`),
+  getRiskScore: (cropId: string) =>
+    apiFetch<RiskScoreResponse>("/api/risk-score", {
+      method: "POST",
+      body: JSON.stringify({ crop_id: cropId }),
+    }),
+
+  getAdvisory: (diseaseLabel: string, severityPct: number, languagePref: string = "en") =>
+    apiFetch<AdvisoryResponse>("/api/advisory", {
+      method: "POST",
+      body: JSON.stringify({
+        disease_label: diseaseLabel,
+        severity_pct: severityPct,
+        language_pref: languagePref,
+      }),
+    }),
 
   officerDashboard: () => apiFetch<OfficerDashboardStats>("/api/officer/dashboard"),
 
-  riskMap: (state?: string) =>
-    apiFetch<{ district: string; risk_level: string; report_count: number }[]>(
-      `/api/officer/risk-map${state ? `?state=${state}` : ""}`
-    ),
+  riskMap: (state: string = "Maharashtra") =>
+    apiFetch<DistrictRiskMapItem[]>(`/api/officer/risk-map?state=${encodeURIComponent(state)}`),
+
+  getValidations: () => apiFetch<ValidationItem[]>("/api/officer/validations"),
+
+  submitValidation: (aiResultId: string, officerId: string, verdict: string, correctedLabel?: string, notes?: string) =>
+    apiFetch<{ id: string; verdict: string }>("/api/officer/validate", {
+      method: "POST",
+      body: JSON.stringify({
+        ai_result_id: aiResultId,
+        officer_id: officerId,
+        verdict,
+        corrected_label: correctedLabel,
+        notes,
+      }),
+    }),
 
   adminStats: () => apiFetch<AdminCommandStats>("/api/admin/stats"),
 
-  broadcastAlert: (state: string, message: string) =>
-    apiFetch<{ status: string }>(`/api/admin/alert?state=${encodeURIComponent(state)}&message=${encodeURIComponent(message)}`, { method: "POST" }),
+  broadcastAlert: (title: string, message: string, level: string = "warning", targetState: string = "Maharashtra") =>
+    apiFetch<{ status: string; alert_id: string }>("/api/admin/alert", {
+      method: "POST",
+      body: JSON.stringify({ title, message, level, target_state: targetState }),
+    }),
 };

@@ -1,0 +1,229 @@
+{
+  "cotton": {
+    "pink_bollworm": {
+      "crop": "Cotton",
+      "disease_or_pest": "Pink Bollworm (Pectinophora gossypiella)",
+      "symptoms": [
+        "Rosette flowers (petals tied together with silken threads) during early flowering.",
+        "Immature bolls showing small entry holes sealed with frass.",
+        "Discolored, stained lint and damaged seeds inside bolls."
+      ],
+      "cultural_controls": [
+        "Avoid growing susceptible off-season host crops and maintain strict crop termination by December.",
+        "Manually collect and burn rosette flowers and fallen early bolls.",
+        "Deep summer plowing after harvest to expose overwintering pupae to sunlight and predators."
+      ],
+      "biological_controls": [
+        "Release Trichogramma bacterae egg parasitoids @ 60,000 to 1,000,000 per hectare weekly during peak egg-laying.",
+        "Apply 5% Neem Seed Kernel Extract (NSKE) or Neem oil (10,000 ppm) as a bio-repellent."
+      ],
+      "chemical_control_guidance": [
+        "Consult your local Krishi Vigyan Kendra (KVK) or district agricultural extension officer for government-approved insecticides registered under CIBRC.",
+        "Avoid indiscriminate use of synthetic pyrethroids to prevent pest resistance and secondary pest resurgence.",
+        "Adhere strictly to recommended pre-harvest safety intervals (PHI)."
+      ],
+      "monitoring_recommendations": [
+        "Install Pheromone traps @ 5 traps per hectare from 45 days after sowing.",
+        "Inspect 20 green bolls per acre weekly; initiate control actions if trap counts exceed 8 male moths per night for 3 consecutive days."
+      ]
+    },
+    "leaf_curl_virus": {
+      "crop": "Cotton",
+      "disease_or_pest": "Cotton Leaf Curl Virus (CLCuV)",
+      "symptoms": [
+        "Upward or downward curling of leaf margins.",
+        "Thickening of leaf veins and enation (leaf-like outgrowths) on the underside of leaves.",
+        "Stunted plant growth and severe reduction in boll formation."
+      ],
+      "cultural_controls": [
+        "Sow virus-tolerant hybrids recommended for your specific agricultural zone.",
+        "Remove and destroy alternative weed hosts (e.g., Abutilon indicum) near field borders.",
+        "Maintain balanced Nitrogen fertilization to avoid lush foliage that attracts vector insects."
+      ],
+      "biological_controls": [
+        "Conserve natural predators such as ladybird beetles, lacewings, and predatory mites.",
+        "Foliar spray of entomopathogenic fungi (Verticillium lecanii) during humid weather."
+      ],
+      "chemical_control_guidance": [
+        "Manage the whitefly vector using state-approved selective insect growth regulators.",
+        "Consult local agricultural extension officers for registered systemic vector control products.",
+        "Never apply broad-spectrum chemicals that destroy beneficial predator populations."
+      ],
+      "monitoring_recommendations": [
+        "Install Yellow Sticky Traps @ 10-12 traps per hectare to monitor whitefly vector populations.",
+        "Inspect 50 random leaves per field for whitefly nymphs and adults."
+      ]
+    }
+  },
+  "tomato": {
+    "early_blight": {
+      "crop": "Tomato",
+      "disease_or_pest": "Early Blight (Alternaria solani)",
+      "symptoms": [
+        "Dark brown to black spots with concentric rings (target board pattern) on older leaves.",
+        "Yellowing of leaf tissue surrounding the spots leading to premature defoliation.",
+        "Sunken, dark lesions on stems and fruit calyx."
+      ],
+      "cultural_controls": [
+        "Prune lower leaves up to 30 cm from the ground to improve air circulation.",
+        "Avoid overhead sprinkler irrigation; use drip irrigation to keep foliage dry.",
+        "Practice 2-3 year crop rotation with non-solanaceous crops (e.g., maize, legumes)."
+      ],
+      "biological_controls": [
+        "Foliar application of Trichoderma viride or Pseudomonas fluorescens @ 5 g/L of water.",
+        "Apply sour buttermilk / fermented whey solution (1 L in 10 L water) at early onset."
+      ],
+      "chemical_control_guidance": [
+        "Consult your local agricultural extension office for CIBRC-approved protective or systemic fungicides.",
+        "Rotate between different fungicide mode-of-action groups to prevent fungal resistance.",
+        "Ensure uniform coverage of both upper and lower leaf surfaces."
+      ],
+      "monitoring_recommendations": [
+        "Inspect lower canopy foliage twice weekly during periods of warm, humid weather (temp 24-29°C, humidity > 80%)."
+      ]
+    },
+    "whitefly": {
+      "crop": "Tomato",
+      "disease_or_pest": "Whitefly (Bemisia tabaci)",
+      "symptoms": [
+        "Tiny white flying insects on the underside of leaves.",
+        "Yellowing, leaf curling, and secretion of sticky honeydew fostering black sooty mold growth.",
+        "Transmission of Tomato Yellow Leaf Curl Virus (TYLCV)."
+      ],
+      "cultural_controls": [
+        "Cover seedling nursery beds with 40-mesh insect-proof nylon netting.",
+        "Plant border crops like maize or sorghum around tomato fields as physical barriers.",
+        "Remove and destroy weeds around field perimeters."
+      ],
+      "biological_controls": [
+        "Spray Beauveria bassiana or Lecanicillium lecanii bio-insecticide @ 5 g/L during evening hours.",
+        "Release Encarsia formosa parasitic wasps or lacewing larvae if available."
+      ],
+      "chemical_control_guidance": [
+        "Consult local agricultural extension officers for approved vector management chemistries.",
+        "Alternate systemic vector management products with soft soaps or botanical extracts."
+      ],
+      "monitoring_recommendations": [
+        "Place Yellow Sticky Traps @ 15-20 traps per hectare across the canopy height.",
+        "Monitor traps weekly; take action when adult counts exceed 5 whiteflies per leaf."
+      ]
+    }
+  },
+  "soybean": {
+    "soybean_rust": {
+      "crop": "Soybean",
+      "disease_or_pest": "Asian Soybean Rust (Phakopsora pachyrhizi)",
+      "symptoms": [
+        "Small tan to reddish-brown pustules on the lower surface of mature leaves.",
+        "Rapid yellowing of foliage and early leaf drop leading to severe yield loss."
+      ],
+      "cultural_controls": [
+        "Plant early-maturing, recommended varieties.",
+        "Ensure optimal plant spacing for adequate air circulation in the canopy."
+      ],
+      "biological_controls": [
+        "Foliar spray of Trichoderma harzianum or Bacillus subtilis bio-fungicide."
+      ],
+      "chemical_control_guidance": [
+        "Consult local agricultural extension officers for approved triazole or strobilurin protective fungicides.",
+        "Apply at first sign of disease pustules during flowering or pod-filling stages."
+      ],
+      "monitoring_recommendations": [
+        "Inspect lower leaf surfaces weekly starting from flowering stage."
+      ]
+    }
+  },
+  "onion": {
+    "purple_blotch": {
+      "crop": "Onion",
+      "disease_or_pest": "Purple Blotch (Alternaria porri)",
+      "symptoms": [
+        "Small water-soaked lesions on leaves and seed stalks that turn purple with age.",
+        "Yellow halo surrounding purple spots, leading to leaf lodging and reduced bulb size."
+      ],
+      "cultural_controls": [
+        "Ensure good drainage and avoid standing water in the field.",
+        "Practice 3-year crop rotation with non-allium crops."
+      ],
+      "biological_controls": [
+        "Foliar spray of Pseudomonas fluorescens @ 5 g/L."
+      ],
+      "chemical_control_guidance": [
+        "Consult local agricultural extension office for approved protective copper or contact fungicides.",
+        "Add a spreader-sticker (wetting agent) to spray mixture due to waxy onion leaves."
+      ],
+      "monitoring_recommendations": [
+        "Monitor fields during high humidity and moderate temperatures (21-30°C)."
+      ]
+    }
+  },
+  "chilli": {
+    "anthracnose": {
+      "crop": "Chilli",
+      "disease_or_pest": "Chilli Anthracnose / Fruit Rot (Colletotrichum capsici)",
+      "symptoms": [
+        "Circular, dark, sunken lesions on mature red or green chilli fruits.",
+        "Concentric rings of black acervuli inside fruit spots under humid conditions."
+      ],
+      "cultural_controls": [
+        "Use disease-free seed treated with bio-fungicide.",
+        "Remove and destroy infected fruits immediately to reduce inoculum."
+      ],
+      "biological_controls": [
+        "Seed treatment with Trichoderma viride @ 4 g/kg seed and foliar spray @ 5 g/L."
+      ],
+      "chemical_control_guidance": [
+        "Consult local agricultural extension officer for CIBRC-registered fruit rot management options."
+      ],
+      "monitoring_recommendations": [
+        "Inspect developing fruit clusters weekly during rainy weather."
+      ]
+    }
+  },
+  "grapes": {
+    "downy_mildew": {
+      "crop": "Grapes",
+      "disease_or_pest": "Grape Downy Mildew (Plasmopara viticola)",
+      "symptoms": [
+        "Translucent 'oil-spot' lesions on the upper leaf surface.",
+        "White dense cottony fungal growth on the underside of leaves and young shoots."
+      ],
+      "cultural_controls": [
+        "Maintain open canopy architecture via timely shoot positioning and leaf removal.",
+        "Ensure proper soil drainage and avoid overhead irrigation."
+      ],
+      "biological_controls": [
+        "Spray Trichoderma viride or Bacillus subtilis bio-fungicide."
+      ],
+      "chemical_control_guidance": [
+        "Consult National Research Centre for Grapes (NRCG) advisory or local extension officers for approved fungicides and pre-harvest intervals."
+      ],
+      "monitoring_recommendations": [
+        "Monitor leaves and berry clusters after rainfall during active shoot growth."
+      ]
+    }
+  },
+  "pomegranate": {
+    "bacterial_blight": {
+      "crop": "Pomegranate",
+      "disease_or_pest": "Pomegranate Bacterial Blight / Telya (Xanthomonas axonopodis pv. punicae)",
+      "symptoms": [
+        "Water-soaked dark brown spots on leaves, stems, and fruits.",
+        "Cracking of fruit along dark brown oily lesions ('Telya' symptoms)."
+      ],
+      "cultural_controls": [
+        "Prune infected twigs using sterilized shears (disinfect with 70% alcohol).",
+        "Orchard sanitation and destruction of infected leaf litter by burning."
+      ],
+      "biological_controls": [
+        "Foliar spray of Pseudomonas fluorescens bio-agent."
+      ],
+      "chemical_control_guidance": [
+        "Consult National Research Centre on Pomegranate (NRCP) or local extension officers for recommended copper-based bactericide schedules."
+      ],
+      "monitoring_recommendations": [
+        "Inspect orchards closely after monsoon showers or high humidity events."
+      ]
+    }
+  }
+}

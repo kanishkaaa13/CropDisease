@@ -5,7 +5,7 @@ from sqlalchemy import text
 from app.db.connection import SessionLocal
 from app.models.schemas import HealthResponse
 
-router = APIRouter(tags=["Health"])
+router = APIRouter()
 
 
 @router.get("/health", response_model=HealthResponse)

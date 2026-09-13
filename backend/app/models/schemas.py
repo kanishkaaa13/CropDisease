@@ -1,6 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 
 class HealthResponse(BaseModel):
@@ -8,6 +8,120 @@ class HealthResponse(BaseModel):
     version: str
     timestamp: datetime
     db_connected: bool
+
+
+class TopPrediction(BaseModel):
+    label: str
+    confidence: float
+
+
+class ScanResponse(BaseModel):
+    label: str
+    confidence: float
+    top3: List[TopPrediction]
+    severity_estimate: float = Field(..., description="Estimated percentage of leaf area affected (0.0 to 100.0)")
+    severity_pct: float = Field(..., description="Estimated percentage of leaf area affected (0.0 to 100.0)")
+    gradcam_image_base64: str = Field(..., description="Base64 encoded PNG data URI of Grad-CAM heatmap overlay")
+    low_confidence: bool = Field(..., description="True if top prediction confidence is below 0.60 threshold")
+
+
+class RiskScoreRequest(BaseModel):
+    crop_id: str = Field(..., example="550e8400-e29b-41d4-a716-446655440000")
+
+
+class RiskWhyFactor(BaseModel):
+    factor: str
+    details: str
+    impact_score: float
+
+
+class RiskForecastDay(BaseModel):
+    day: str
+    date: str
+    predicted_risk_score: float
+    risk_level: str
+    temp_max: float
+    rain_mm: float
+
+
+class RiskScoreResponse(BaseModel):
+    crop_id: str
+    overall_score: float
+    risk_level: str  # LOW / MODERATE / HIGH / CRITICAL
+    disease_risk: float
+    pest_risk: float
+    weather_risk: float
+    why: List[RiskWhyFactor]
+    forecast: List[RiskForecastDay]
+
+
+class AdvisoryRequest(BaseModel):
+    crop_id: Optional[str] = None
+    ai_result_id: Optional[str] = None
+    disease_label: Optional[str] = Field(default="Tomato___Early_blight", example="Tomato___Early_blight")
+    severity_pct: float = Field(default=25.0, example=32.5)
+    crop_name: Optional[str] = Field(default="Tomato", example="Tomato")
+    growth_stage: Optional[str] = Field(default="flowering", example="flowering")
+    language_pref: Optional[str] = Field(default="en", example="mr")
+
+
+class AdvisoryTreatments(BaseModel):
+    chemical: List[str]
+    organic: List[str]
+    cultural: List[str]
+
+
+class AdvisoryResponse(BaseModel):
+    disease_label: str
+    disease_name_formatted: str
+    severity_pct: float
+    severity_category: str
+    crop_name: str
+    growth_stage: str
+    language: str
+    treatments: AdvisoryTreatments
+    urgency_level: str
+
+
+class LanguageAdvisoryContent(BaseModel):
+    summary: str
+    action_steps: List[str]
+
+
+class RAGAdvisoryResponse(BaseModel):
+    crop_id: Optional[str] = None
+    ai_result_id: Optional[str] = None
+    match_confidence: str = Field(..., description="exact_match, fuzzy_match, or generic_fallback")
+    kb_entry_found: bool = Field(..., description="True if IPM knowledge base entry was found")
+    advisory: Dict[str, LanguageAdvisoryContent] = Field(..., description="Multilingual advisories in en, hi, mr")
+    retrieved_kb: Dict[str, Any] = Field(..., description="Retrieved IPM Knowledge Base entry (ground truth)")
+
+
+class ExpertValidationRequest(BaseModel):
+    ai_result_id: str
+    officer_id: str
+    verdict: str = Field(..., example="confirmed")  # confirmed / corrected / referred
+    corrected_label: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class ExpertValidationResponse(BaseModel):
+    id: str
+    ai_result_id: str
+    officer_id: str
+    verdict: str
+    corrected_label: Optional[str]
+    notes: Optional[str]
+    timestamp: datetime
+
+
+class AdminAlertRequest(BaseModel):
+    crop_id: Optional[str] = None
+    level: str = Field(default="warning", example="danger")  # info / warning / danger / critical
+    title: str = Field(..., example="High Late Blight Outbreak Risk")
+    message: str = Field(..., example="Preventative fungicidal spray recommended across Nashik district.")
+    target_state: Optional[str] = "Maharashtra"
+    target_district: Optional[str] = None
 
 
 class DiseaseDetectionRequest(BaseModel):

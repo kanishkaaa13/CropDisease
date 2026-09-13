@@ -1,11 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health, farmer, officer, admin
+from app.api import health, farmer, officer, admin, scan, risk, advisory
 from app.db.connection import engine, Base
 
-# Create all tables on startup
-Base.metadata.create_all(bind=engine)
+# Create all tables on startup (if database is reachable)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as exc:
+    import logging
+    logging.getLogger("main").warning("Database connection failed on startup (%s). Tables not auto-created.", exc)
 
 app = FastAPI(
     title="KrushiRakshak AI",
@@ -27,6 +31,9 @@ app.add_middleware(
 
 # Routers
 app.include_router(health.router, prefix="/api")
+app.include_router(scan.router, prefix="/api", tags=["AI Scan"])
+app.include_router(risk.router, prefix="/api", tags=["Risk Engine"])
+app.include_router(advisory.router, prefix="/api", tags=["Agronomic Advisory"])
 app.include_router(farmer.router, prefix="/api/farmer", tags=["Farmer"])
 app.include_router(officer.router, prefix="/api/officer", tags=["Officer"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
