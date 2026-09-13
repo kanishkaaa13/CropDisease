@@ -76,7 +76,7 @@ export interface AdvisoryTreatments {
 
 export interface AdvisoryResponse {
   disease_label: string;
-  disease_name_formatted: str;
+  disease_name_formatted: string;
   severity_pct: number;
   severity_category: string;
   crop_name: string;
@@ -113,6 +113,44 @@ export interface ValidationItem {
   district: string;
   timestamp: string;
   is_validated: boolean;
+}
+
+export interface RiskHotspot {
+  cluster_id: string | number;
+  district: string;
+  taluka: string;
+  village: string;
+  center_lat: number;
+  center_lng: number;
+  farm_count: number;
+  crop_count: number;
+  avg_risk_score: number;
+  case_count: number;
+  dominant_disease: string;
+  risk_level: "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
+}
+
+export interface OfficerQueueItem {
+  ai_result_id: string;
+  observation_id: string;
+  disease_label: string;
+  confidence: number;
+  severity_pct: number;
+  image_urls: string[];
+  crop_name: string;
+  crop_id: string | null;
+  farm_name: string;
+  farm_id: string | null;
+  district: string;
+  taluka: string;
+  village: string;
+  gps_lat: number | null;
+  gps_lng: number | null;
+  distance_km: number;
+  risk_level: string;
+  risk_score: number;
+  priority_score: number;
+  timestamp: string;
 }
 
 export interface AdminCommandStats {
@@ -156,6 +194,17 @@ export const api = {
     apiFetch<DistrictRiskMapItem[]>(`/api/officer/risk-map?state=${encodeURIComponent(state)}`),
 
   getValidations: () => apiFetch<ValidationItem[]>("/api/officer/validations"),
+
+  getHotspots: (state: string = "Maharashtra", clusterRadiusKm: number = 10.0) =>
+    apiFetch<RiskHotspot[]>(`/api/officer/hotspots?state=${encodeURIComponent(state)}&cluster_radius_km=${clusterRadiusKm}`),
+
+  getOfficerQueue: (officerLat?: number, officerLng?: number, limit: number = 50) => {
+    const params = new URLSearchParams();
+    if (officerLat !== undefined) params.append("officer_lat", officerLat.toString());
+    if (officerLng !== undefined) params.append("officer_lng", officerLng.toString());
+    params.append("limit", limit.toString());
+    return apiFetch<OfficerQueueItem[]>(`/api/officer/queue?${params.toString()}`);
+  },
 
   submitValidation: (aiResultId: string, officerId: string, verdict: string, correctedLabel?: string, notes?: string) =>
     apiFetch<{ id: string; verdict: string }>("/api/officer/validate", {
