@@ -5,55 +5,61 @@ import {
   api,
   type OfficerDashboardStats,
   type DistrictRiskMapItem,
-  type ValidationItem,
+  type OfficerQueueItem,
+  type RiskHotspot,
 } from "@/lib/api";
+import OfficerMap from "@/components/OfficerMap";
 
 export default function OfficerPage() {
   const [stats, setStats] = useState<OfficerDashboardStats | null>(null);
   const [riskData, setRiskData] = useState<DistrictRiskMapItem[]>([]);
-  const [validations, setValidations] = useState<ValidationItem[]>([]);
+  const [queueItems, setQueueItems] = useState<OfficerQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedValidation, setSelectedValidation] = useState<ValidationItem | null>(null);
+  const [selectedQueueItem, setSelectedQueueItem] = useState<OfficerQueueItem | null>(null);
   const [verdict, setVerdict] = useState<"confirmed" | "corrected" | "referred">("confirmed");
   const [correctedLabel, setCorrectedLabel] = useState("");
   const [notes, setNotes] = useState("");
   const [submittingVal, setSubmittingVal] = useState(false);
+  const [userRole, setUserRole] = useState<"officer" | "admin" | null>(null);
 
   function loadData() {
     setLoading(true);
     Promise.all([
       api.officerDashboard(),
       api.riskMap("Maharashtra"),
-      api.getValidations(),
+      api.getOfficerQueue(19.0, 73.0, 50),
     ])
-      .then(([s, r, v]) => {
+      .then(([s, r, q]) => {
         setStats(s);
         setRiskData(r);
-        setValidations(v);
+        setQueueItems(q);
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }
 
   useEffect(() => {
+    // Simple role selector stub
+    const role = localStorage.getItem("userRole") as "officer" | "admin" | null;
+    setUserRole(role || "officer");
     loadData();
   }, []);
 
   async function handleValidationSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedValidation) return;
+    if (!selectedQueueItem) return;
     setSubmittingVal(true);
 
     try {
       await api.submitValidation(
-        selectedValidation.ai_result_id,
+        selectedQueueItem.ai_result_id,
         "officer-1",
         verdict,
         verdict === "corrected" ? correctedLabel : undefined,
         notes
       );
-      setSelectedValidation(null);
+      setSelectedQueueItem(null);
       setCorrectedLabel("");
       setNotes("");
       loadData();
@@ -86,24 +92,37 @@ export default function OfficerPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10">
-      {/* Title */}
+    <div className="max-w-7xl mx-auto px-4 py-10">
+      {/* Title & Role Selector */}
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-black text-white tracking-tight">
             📊 Field Officer Command Dashboard
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            District-level outbreak risk maps, outbreak density, and human-in-the-loop expert validation queue.
+            Geospatial risk hotspots, prioritized validation queue, and expert review workflow.
           </p>
         </div>
 
-        <button
-          onClick={loadData}
-          className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 rounded-xl text-xs font-bold transition-all"
-        >
-          🔄 Refresh Live Metrics
-        </button>
+        <div className="flex items-center gap-3">
+          <select
+            value={userRole || "officer"}
+            onChange={(e) => {
+              setUserRole(e.target.value as "officer" | "admin");
+              localStorage.setItem("userRole", e.target.value);
+            }}
+            className="px-3 py-2 bg-white/5 border border-white/10 text-slate-300 rounded-xl text-xs font-bold"
+          >
+            <option value="officer">Officer</option>
+            <option value="admin">Admin</option>
+          </select>
+          <button
+            onClick={loadData}
+            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 rounded-xl text-xs font-bold transition-all"
+          >
+            🔄 Refresh
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -133,74 +152,30 @@ export default function OfficerPage() {
         </div>
       )}
 
-      {/* District Risk Heatmap & Outbreak Table */}
-      <div className="grid md:grid-cols-12 gap-8 mb-10">
-        {/* District Risk Table (7 cols) */}
-        <div className="md:col-span-7 glass p-6">
-          <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2">
-            🗺️ Maharashtra District Outbreak Risk Heatmap
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead>
-                <tr className="border-b border-white/10 text-slate-400 uppercase tracking-wider text-[10px]">
-                  <th className="pb-2">District</th>
-                  <th className="pb-2 text-right">Farms</th>
-                  <th className="pb-2 text-right">High Risk</th>
-                  <th className="pb-2 text-right">Avg Risk Score</th>
-                  <th className="pb-2 text-right">Level</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {riskData.map((item) => (
-                  <tr key={item.district} className="hover:bg-white/[0.02]">
-                    <td className="py-2.5 font-bold text-slate-200">{item.district}</td>
-                    <td className="py-2.5 text-right text-slate-400 font-mono">{item.total_farms}</td>
-                    <td className="py-2.5 text-right font-mono text-amber-400 font-bold">{item.high_risk_crops}</td>
-                    <td className="py-2.5 text-right font-mono font-bold text-slate-200">{item.avg_risk_score.toFixed(1)}</td>
-                    <td className="py-2.5 text-right">
-                      <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] ${riskBadgeClass[item.risk_level] || ""}`}>
-                        {item.risk_level}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Top Diseases List (5 cols) */}
-        <div className="md:col-span-5 glass p-6">
-          <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2">
-            🦠 Top Pathogen Outbreaks
-          </h2>
-          <div className="flex flex-col gap-3">
-            {stats?.top_diseases.map((d, i) => (
-              <div key={i} className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
-                <span className="text-xs font-semibold text-slate-200 truncate">{d.name}</span>
-                <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                  {d.count} cases
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Geospatial Risk Hotspots Map */}
+      <div className="glass p-6 mb-8">
+        <h2 className="text-lg font-black text-white mb-4 flex items-center gap-2">
+          🗺️ Maharashtra Risk Hotspots Map
+        </h2>
+        <p className="text-xs text-slate-400 mb-4">
+          Color-coded markers show farm clusters by risk level. Click markers for cluster details.
+        </p>
+        <OfficerMap officerLat={19.0} officerLng={73.0} />
       </div>
 
-      {/* Human-in-the-Loop Expert Validation Queue */}
+      {/* Prioritized Validation Queue */}
       <div className="glass p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-black text-white flex items-center gap-2">
-              🔬 Expert Validation Queue (Human-in-the-Loop)
+              🔬 Prioritized Validation Queue
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Review AI diagnostic scan predictions and submit field officer verdicts.
+              Cases sorted by priority score (risk level, confidence, distance)
             </p>
           </div>
           <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20">
-            {validations.length} Scans Pending
+            {queueItems.length} Cases Pending
           </span>
         </div>
 
@@ -208,46 +183,46 @@ export default function OfficerPage() {
           <table className="w-full text-xs text-left">
             <thead>
               <tr className="border-b border-white/10 text-slate-400 uppercase tracking-wider text-[10px]">
-                <th className="pb-2">Farm & District</th>
+                <th className="pb-2">Priority</th>
+                <th className="pb-2">Farm & Location</th>
                 <th className="pb-2">AI Diagnosis</th>
                 <th className="pb-2 text-right">Confidence</th>
-                <th className="pb-2 text-right">Severity</th>
-                <th className="pb-2 text-center">Status</th>
+                <th className="pb-2 text-right">Risk</th>
+                <th className="pb-2 text-right">Distance</th>
                 <th className="pb-2 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {validations.slice(0, 8).map((val) => (
-                <tr key={val.ai_result_id} className="hover:bg-white/[0.02]">
+              {queueItems.slice(0, 10).map((item) => (
+                <tr key={item.ai_result_id} className="hover:bg-white/[0.02]">
                   <td className="py-3">
-                    <p className="font-bold text-slate-200">{val.farm_name}</p>
-                    <p className="text-[10px] text-slate-400">{val.district} • {val.crop_name}</p>
+                    <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                      {item.priority_score.toFixed(1)}
+                    </span>
+                  </td>
+                  <td className="py-3">
+                    <p className="font-bold text-slate-200">{item.farm_name}</p>
+                    <p className="text-[10px] text-slate-400">{item.district} • {item.taluka}</p>
                   </td>
                   <td className="py-3">
                     <span className="font-semibold text-emerald-300">
-                      {val.disease_label ? val.disease_label.replace("___", " - ") : "Scanning..."}
+                      {item.disease_label ? item.disease_label.replace("___", " - ") : "Scanning..."}
                     </span>
                   </td>
                   <td className="py-3 text-right font-mono font-bold text-slate-300">
-                    {(val.confidence * 100).toFixed(1)}%
+                    {item.confidence.toFixed(1)}%
                   </td>
-                  <td className="py-3 text-right font-mono font-bold text-amber-400">
-                    {val.severity_pct.toFixed(1)}%
+                  <td className="py-3 text-right">
+                    <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] ${riskBadgeClass[item.risk_level] || ""}`}>
+                      {item.risk_level}
+                    </span>
                   </td>
-                  <td className="py-3 text-center">
-                    {val.is_validated ? (
-                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                        ✓ Validated
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full">
-                        Pending
-                      </span>
-                    )}
+                  <td className="py-3 text-right font-mono text-slate-400">
+                    {item.distance_km.toFixed(1)} km
                   </td>
                   <td className="py-3 text-right">
                     <button
-                      onClick={() => setSelectedValidation(val)}
+                      onClick={() => setSelectedQueueItem(item)}
                       className="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs transition-all shadow"
                     >
                       Validate
@@ -261,15 +236,15 @@ export default function OfficerPage() {
       </div>
 
       {/* Validation Modal */}
-      {selectedValidation && (
+      {selectedQueueItem && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="glass max-w-lg w-full p-6 border-emerald-500/40 shadow-2xl">
             <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-3">
               <h3 className="text-base font-extrabold text-white">
-                🔬 Expert Validation: {selectedValidation.farm_name}
+                🔬 Expert Validation: {selectedQueueItem.farm_name}
               </h3>
               <button
-                onClick={() => setSelectedValidation(null)}
+                onClick={() => setSelectedQueueItem(null)}
                 className="text-slate-400 hover:text-white text-lg font-bold"
               >
                 ✕
@@ -278,9 +253,11 @@ export default function OfficerPage() {
 
             <form onSubmit={handleValidationSubmit} className="flex flex-col gap-4">
               <div className="bg-white/5 p-3 rounded-xl text-xs space-y-1">
-                <p><span className="text-slate-400">AI Prediction:</span> <strong className="text-emerald-400">{selectedValidation.disease_label}</strong></p>
-                <p><span className="text-slate-400">AI Confidence:</span> <strong>{(selectedValidation.confidence * 100).toFixed(1)}%</strong></p>
-                <p><span className="text-slate-400">HSV Severity:</span> <strong>{selectedValidation.severity_pct}%</strong></p>
+                <p><span className="text-slate-400">AI Prediction:</span> <strong className="text-emerald-400">{selectedQueueItem.disease_label}</strong></p>
+                <p><span className="text-slate-400">AI Confidence:</span> <strong>{selectedQueueItem.confidence.toFixed(1)}%</strong></p>
+                <p><span className="text-slate-400">Risk Level:</span> <strong>{selectedQueueItem.risk_level}</strong></p>
+                <p><span className="text-slate-400">Priority Score:</span> <strong>{selectedQueueItem.priority_score.toFixed(1)}</strong></p>
+                <p><span className="text-slate-400">Distance:</span> <strong>{selectedQueueItem.distance_km.toFixed(1)} km</strong></p>
               </div>
 
               <div>
@@ -330,7 +307,7 @@ export default function OfficerPage() {
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setSelectedValidation(null)}
+                  onClick={() => setSelectedQueueItem(null)}
                   className="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl text-xs font-semibold"
                 >
                   Cancel
