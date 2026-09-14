@@ -6,7 +6,7 @@ with temperature scaling, flags low confidence (< 0.6), and integrates Grad-CAM 
 import io
 import logging
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional, TypedDict
 
 import numpy as np
 
@@ -31,6 +31,14 @@ from app.ml.severity_estimator import estimate_disease_severity
 from app.services.dataset_manager import get_dataset_manager
 
 logger = logging.getLogger(__name__)
+
+
+class DiseaseProbability(TypedDict):
+    """Type definition for disease prediction output."""
+    predicted_label: str
+    confidence: float
+    top3: List[Dict[str, Any]]
+    is_low_confidence: bool
 
 # Standard weights location
 WEIGHTS_PATH = Path(__file__).parent / "weights" / "disease_classifier_efficientnet_b0.pth"
@@ -93,8 +101,11 @@ class DiseaseClassifier:
     def _load_model(self):
         """Attempt to load trained PyTorch model payload from disk."""
         if not _HAS_TORCH:
-            logger.warning("PyTorch/torchvision not installed. Running DiseaseClassifier in fallback mode.")
+            logger.warning("PyTorch/torchvision not installed. Running DiseaseClassifier in MOCK mode.")
             self.is_fallback = True
+            logger.info("=" * 60)
+            logger.info("DISEASE CLASSIFIER MODE: MOCK (No PyTorch)")
+            logger.info("=" * 60)
             return
 
         # Try to load class names from Kaggle dataset if enabled
@@ -110,10 +121,13 @@ class DiseaseClassifier:
 
         if not self.weights_path.exists():
             logger.warning(
-                "Model weights not found at %s. Running DiseaseClassifier in fallback/scaffold mode.",
+                "Model weights not found at %s. Running DiseaseClassifier in MOCK mode.",
                 self.weights_path
             )
             self.is_fallback = True
+            logger.info("=" * 60)
+            logger.info("DISEASE CLASSIFIER MODE: MOCK (No model weights found)")
+            logger.info("=" * 60)
             return
 
         try:
@@ -144,21 +158,27 @@ class DiseaseClassifier:
             self.gradcam_engine = GradCAM(self.model)
             logger.info("Successfully loaded trained EfficientNet-B0 model with %d classes (T=%.2f).",
                         num_classes, self.temperature)
+            logger.info("=" * 60)
+            logger.info("DISEASE CLASSIFIER MODE: REAL (Trained model loaded)")
+            logger.info("=" * 60)
 
         except Exception as exc:
-            logger.error("Failed to load model weights from %s: %s. Reverting to fallback mode.",
+            logger.error("Failed to load model weights from %s: %s. Reverting to MOCK mode.",
                          self.weights_path, exc)
             self.is_fallback = True
+            logger.info("=" * 60)
+            logger.info("DISEASE CLASSIFIER MODE: MOCK (Model load failed)")
+            logger.info("=" * 60)
 
-    def predict(self, image: Image.Image, top_k: int = 3) -> Dict[str, Any]:
+    def predict(self, image: Image.Image, top_k: int = 3) -> DiseaseProbability:
         """
         Run inference on a PIL image.
         Returns:
-            dict containing:
-            - label (str): Top-1 predicted class
+            DiseaseProbability containing:
+            - predicted_label (str): Top-1 predicted class
             - confidence (float): Top-1 confidence score (calibrated)
             - top3 (list): Top-k predictions [{"label": ..., "confidence": ...}, ...]
-            - low_confidence (bool): True if top-1 confidence < 0.6
+            - is_low_confidence (bool): True if top-1 confidence < 0.6
         """
         if self.is_fallback or self.model is None:
             return self._fallback_prediction(image, top_k)
@@ -183,30 +203,29 @@ class DiseaseClassifier:
             })
 
         top_prediction = top3[0]
-        top_label = top_prediction["label"]
-        top_confidence = top_prediction["confidence"]
-        low_confidence = top_confidence < 0.60
+        predicted_label = top_prediction["label"]
+        confidence = top_prediction["confidence"]
+        is_low_confidence = confidence < 0.60
 
-        return {
-            "label": top_label,
-            "confidence": top_confidence,
-            "top3": top3,
-            "low_confidence": low_confidence,
-            "target_class_idx": int(top_indices[0].item())
-        }
+        return DiseaseProbability(
+            predicted_label=predicted_label,
+            confidence=confidence,
+            top3=top3,
+            is_low_confidence=is_low_confidence,
+        )
 
-    def _fallback_prediction(self, image: Image.Image, top_k: int = 3) -> Dict[str, Any]:
+    def _fallback_prediction(self, image: Image.Image, top_k: int = 3) -> DiseaseProbability:
         """
         Mock prediction when model weights are not loaded.
         Returns realistic sample output.
         """
         # Deterministic sample based on image size to be consistent
         w, h = image.size
-        sample_idx = (w * h) % len(DEFAULT_CLASSES)
+        sample_idx = (w * h) % len(self.classes)
 
-        primary_class = DEFAULT_CLASSES[sample_idx]
-        sec_class = DEFAULT_CLASSES[(sample_idx + 1) % len(DEFAULT_CLASSES)]
-        tri_class = DEFAULT_CLASSES[(sample_idx + 2) % len(DEFAULT_CLASSES)]
+        primary_class = self.classes[sample_idx]
+        sec_class = self.classes[(sample_idx + 1) % len(self.classes)]
+        tri_class = self.classes[(sample_idx + 2) % len(self.classes)]
 
         top3 = [
             {"label": primary_class, "confidence": 0.8850},
@@ -214,13 +233,12 @@ class DiseaseClassifier:
             {"label": tri_class, "confidence": 0.0330},
         ]
 
-        return {
-            "label": primary_class,
-            "confidence": 0.8850,
-            "top3": top3[:top_k],
-            "low_confidence": False,
-            "target_class_idx": sample_idx
-        }
+        return DiseaseProbability(
+            predicted_label=primary_class,
+            confidence=0.8850,
+            top3=top3[:top_k],
+            is_low_confidence=False,
+        )
 
     def scan_crop_image(self, image: Image.Image) -> Dict[str, Any]:
         """
@@ -240,7 +258,8 @@ class DiseaseClassifier:
         if not self.is_fallback and self.model is not None:
             try:
                 input_tensor = self.transform(image.convert("RGB")).unsqueeze(0).to(self.device)
-                target_idx = pred_res.get("target_class_idx", 0)
+                # Get target class index from predicted label
+                target_idx = self.classes.index(pred_res["predicted_label"]) if pred_res["predicted_label"] in self.classes else 0
 
                 gradcam_engine = GradCAM(self.model)
                 heatmap_np = gradcam_engine.generate_heatmap(input_tensor, target_class_idx=target_idx)
@@ -252,13 +271,13 @@ class DiseaseClassifier:
             gradcam_base64 = self._generate_dummy_heatmap_base64(image)
 
         return {
-            "label": pred_res["label"],
+            "label": pred_res["predicted_label"],
             "confidence": pred_res["confidence"],
             "top3": pred_res["top3"],
             "severity_estimate": severity_pct,
             "severity_pct": severity_pct,
             "gradcam_image_base64": gradcam_base64,
-            "low_confidence": pred_res["low_confidence"],
+            "low_confidence": pred_res["is_low_confidence"],
         }
 
     def _generate_dummy_heatmap_base64(self, image: Image.Image) -> str:
@@ -293,3 +312,18 @@ def get_disease_classifier() -> DiseaseClassifier:
     if _disease_classifier_instance is None:
         _disease_classifier_instance = DiseaseClassifier()
     return _disease_classifier_instance
+
+
+def predict_disease(image: Image.Image) -> DiseaseProbability:
+    """
+    Standalone function to predict disease from a crop image.
+    Can be called independently of FastAPI routes (e.g., by fusion stage).
+    
+    Args:
+        image: PIL Image object
+    
+    Returns:
+        DiseaseProbability containing prediction results
+    """
+    classifier = get_disease_classifier()
+    return classifier.predict(image, top_k=3)
