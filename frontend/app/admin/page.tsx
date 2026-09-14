@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { api, type AdminSummary, type DistrictAnalytics, type Outbreak, type RiskTrendData } from "@/lib/api";
 import OfficerMap from "@/components/OfficerMap";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -18,7 +18,7 @@ export default function AdminPage() {
   const [sortOrder, setSortOrder] = useState("desc");
   const [filterDistrict, setFilterDistrict] = useState("");
 
-  function loadData() {
+  const loadData = useCallback(() => {
     setLoading(true);
     setError(null);
 
@@ -36,11 +36,11 @@ export default function AdminPage() {
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }
+  }, [sortBy, sortOrder]);
 
   useEffect(() => {
     loadData();
-  }, [sortBy, sortOrder]);
+  }, [loadData]);
 
   function handleSort(column: string) {
     if (sortBy === column) {
@@ -135,7 +135,7 @@ export default function AdminPage() {
                       contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px' }}
                       itemStyle={{ color: '#fff' }}
                       labelStyle={{ color: '#94a3b8' }}
-                      formatter={(value: number) => [value.toFixed(1), 'Risk Score']}
+                      formatter={(value: unknown) => [typeof value === 'number' ? value.toFixed(1) : String(value || ''), 'Risk Score']}
                     />
                     <Line 
                       type="monotone" 

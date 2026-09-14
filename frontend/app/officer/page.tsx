@@ -47,13 +47,13 @@ export default function OfficerPage() {
     setSubmittingVal(true);
 
     try {
-      await api.submitValidation(
-        selectedQueueItem.ai_result_id,
-        "officer-1",
+      await api.submitValidation({
+        ai_result_id: selectedQueueItem.ai_result_id,
+        officer_id: "officer-1",
         verdict,
-        verdict === "corrected" ? correctedLabel : undefined,
-        notes
-      );
+        corrected_label: verdict === "corrected" ? correctedLabel : undefined,
+        notes,
+      });
       setSelectedQueueItem(null);
       setCorrectedLabel("");
       setNotes("");
