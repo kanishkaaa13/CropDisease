@@ -171,6 +171,49 @@ export interface AdminCommandStats {
   alerts_issued: number;
 }
 
+export interface AdminSummary {
+  total_monitored_farms: number;
+  active_alerts: number;
+  high_risk_villages: number;
+  disease_outbreaks_detected: number;
+  pending_expert_validations: number;
+}
+
+export interface DistrictAnalytics {
+  district: string;
+  dominant_crop: string;
+  dominant_threat: string;
+  risk_score: number;
+  case_count: number;
+  farm_count: number;
+}
+
+export interface Outbreak {
+  village: string;
+  district: string;
+  taluka: string;
+  crop: string;
+  disease: string;
+  current_week_cases: number;
+  previous_week_cases: number;
+  growth_pct: number;
+  risk_level: string;
+}
+
+export interface RiskTrendData {
+  date: string;
+  avg_risk_score: number;
+  case_count: number;
+}
+
+export interface ValidationSubmission {
+  ai_result_id: string;
+  officer_id: string;
+  verdict: "confirmed" | "corrected" | "referred";
+  corrected_label?: string;
+  notes?: string;
+}
+
 // ─── Endpoints ────────────────────────────────────────────────────────────────
 
 export const api = {
@@ -225,16 +268,10 @@ export const api = {
     return apiFetch<OfficerQueueItem[]>(`/api/officer/queue?${params.toString()}`);
   },
 
-  submitValidation: (aiResultId: string, officerId: string, verdict: string, correctedLabel?: string, notes?: string) =>
-    apiFetch<{ id: string; verdict: string }>("/api/officer/validate", {
+  submitValidation: (payload: ValidationSubmission) =>
+    apiFetch<{ message: string }>("/api/officer/validate", {
       method: "POST",
-      body: JSON.stringify({
-        ai_result_id: aiResultId,
-        officer_id: officerId,
-        verdict,
-        corrected_label: correctedLabel,
-        notes,
-      }),
+      body: JSON.stringify(payload),
     }),
 
   adminStats: () => apiFetch<AdminCommandStats>("/api/admin/stats"),
@@ -244,4 +281,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ title, message, level, target_state: targetState }),
     }),
+
+  // Admin endpoints
+  adminSummary: () => apiFetch<AdminSummary>("/api/admin/summary"),
+
+  adminDistrictAnalytics: (state: string = "Maharashtra", sortBy: string = "risk_score", sortOrder: string = "desc") =>
+    apiFetch<DistrictAnalytics[]>(`/api/admin/district-analytics?state=${encodeURIComponent(state)}&sort_by=${sortBy}&sort_order=${sortOrder}`),
+
+  adminOutbreaks: (growthThreshold: number = 30.0) =>
+    apiFetch<Outbreak[]>(`/api/admin/outbreaks?growth_threshold=${growthThreshold}`),
+
+  adminRiskTrend: (state: string = "Maharashtra", days: number = 30) =>
+    apiFetch<RiskTrendData[]>(`/api/admin/risk-trend?state=${encodeURIComponent(state)}&days=${days}`),
 };
