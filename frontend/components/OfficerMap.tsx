@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { api, type RiskHotspot } from "@/lib/api";
@@ -16,7 +16,6 @@ export default function OfficerMap({ officerLat = 19.0, officerLng = 73.0, onHot
   const map = useRef<maplibregl.Map | null>(null);
   const [hotspots, setHotspots] = useState<RiskHotspot[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedHotspot, setSelectedHotspot] = useState<RiskHotspot | null>(null);
 
   useEffect(() => {
     // Load hotspots data
@@ -44,25 +43,12 @@ export default function OfficerMap({ officerLat = 19.0, officerLng = 73.0, onHot
 
     map.current.addControl(new maplibregl.NavigationControl(), "top-right");
 
-    // Add hotspots when map loads
-    map.current.on("load", () => {
-      if (map.current && hotspots.length > 0) {
-        addHotspotsToMap();
-      }
-    });
-
     return () => {
       map.current?.remove();
     };
-  }, []);
+  }, [officerLat, officerLng]);
 
-  useEffect(() => {
-    if (map.current && hotspots.length > 0) {
-      addHotspotsToMap();
-    }
-  }, [hotspots]);
-
-  function addHotspotsToMap() {
+  const addHotspotsToMap = useCallback(() => {
     if (!map.current) return;
 
     // Remove existing markers
@@ -103,13 +89,12 @@ export default function OfficerMap({ officerLat = 19.0, officerLng = 73.0, onHot
       });
 
       markerEl.addEventListener("click", () => {
-        setSelectedHotspot(hotspot);
         onHotspotClick?.(hotspot);
 
         // Show popup
         const currentMap = map.current;
         if (currentMap) {
-          const popup = new maplibregl.Popup({ offset: 25 })
+          new maplibregl.Popup({ offset: 25 })
             .setHTML(`
               <div style="padding: 8px; min-width: 200px;">
                 <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #1f2937;">
@@ -141,7 +126,13 @@ export default function OfficerMap({ officerLat = 19.0, officerLng = 73.0, onHot
           .addTo(currentMap);
       }
     });
-  }
+  }, [hotspots, onHotspotClick]);
+
+  useEffect(() => {
+    if (map.current && hotspots.length > 0) {
+      addHotspotsToMap();
+    }
+  }, [hotspots, addHotspotsToMap]);
 
   return (
     <div className="relative w-full h-full min-h-[400px] rounded-xl overflow-hidden border border-white/10">

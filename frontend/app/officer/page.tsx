@@ -4,15 +4,12 @@ import { useEffect, useState } from "react";
 import {
   api,
   type OfficerDashboardStats,
-  type DistrictRiskMapItem,
   type OfficerQueueItem,
-  type RiskHotspot,
 } from "@/lib/api";
 import OfficerMap from "@/components/OfficerMap";
 
 export default function OfficerPage() {
   const [stats, setStats] = useState<OfficerDashboardStats | null>(null);
-  const [riskData, setRiskData] = useState<DistrictRiskMapItem[]>([]);
   const [queueItems, setQueueItems] = useState<OfficerQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,12 +24,10 @@ export default function OfficerPage() {
     setLoading(true);
     Promise.all([
       api.officerDashboard(),
-      api.riskMap("Maharashtra"),
       api.getOfficerQueue(19.0, 73.0, 50),
     ])
-      .then(([s, r, q]) => {
+      .then(([s, q]) => {
         setStats(s);
-        setRiskData(r);
         setQueueItems(q);
       })
       .catch((e: Error) => setError(e.message))

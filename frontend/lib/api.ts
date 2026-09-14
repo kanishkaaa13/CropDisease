@@ -86,6 +86,16 @@ export interface AdvisoryResponse {
   urgency_level: string;
 }
 
+export interface RAGAdvisoryResponse {
+  advisory: {
+    en: { summary: string; action_steps: string[] };
+    hi: { summary: string; action_steps: string[] };
+    mr: { summary: string; action_steps: string[] };
+  };
+  match_confidence: string;
+  kb_entry_found: boolean;
+}
+
 export interface OfficerDashboardStats {
   total_reports: number;
   high_severity_count: number;
@@ -185,6 +195,15 @@ export const api = {
         disease_label: diseaseLabel,
         severity_pct: severityPct,
         language_pref: languagePref,
+      }),
+    }),
+
+  getRAGAdvisory: (cropId: string, aiResultId: string) =>
+    apiFetch<RAGAdvisoryResponse>("/api/advisory", {
+      method: "POST",
+      body: JSON.stringify({
+        crop_id: cropId,
+        ai_result_id: aiResultId,
       }),
     }),
 
