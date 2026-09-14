@@ -8,6 +8,7 @@ from PIL import Image
 
 from app.models.schemas import ScanResponse
 from app.ml.disease_classifier import get_disease_classifier
+from app.services.dataset_manager import get_dataset_manager
 
 router = APIRouter()
 
@@ -62,4 +63,69 @@ async def scan_crop_disease(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred during crop scanning: {str(exc)}"
+        )
+
+
+@router.post("/dataset/download", summary="Download Kaggle crop disease dataset")
+def download_dataset(force: bool = False):
+    """
+    Download the Kaggle crop pest and disease detection dataset.
+    Returns dataset statistics after download.
+    """
+    try:
+        dataset_manager = get_dataset_manager()
+        dataset_path = dataset_manager.download_dataset(force=force)
+        stats = dataset_manager.get_dataset_stats()
+        
+        return {
+            "status": "success",
+            "dataset_path": str(dataset_path),
+            "stats": stats,
+        }
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to download dataset: {str(exc)}"
+        )
+
+
+@router.get("/dataset/stats", summary="Get dataset statistics")
+def get_dataset_stats():
+    """
+    Get statistics about the downloaded dataset including
+    number of classes and images per class.
+    """
+    try:
+        dataset_manager = get_dataset_manager()
+        stats = dataset_manager.get_dataset_stats()
+        
+        return {
+            "status": "success",
+            "stats": stats,
+        }
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get dataset stats: {str(exc)}"
+        )
+
+
+@router.get("/dataset/classes", summary="Get dataset class names")
+def get_dataset_classes():
+    """
+    Get list of class names from the dataset.
+    """
+    try:
+        dataset_manager = get_dataset_manager()
+        classes = dataset_manager.get_class_directories()
+        
+        return {
+            "status": "success",
+            "classes": classes,
+            "total_classes": len(classes),
+        }
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get dataset classes: {str(exc)}"
         )

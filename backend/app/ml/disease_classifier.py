@@ -28,6 +28,7 @@ from PIL import Image
 
 from app.ml.gradcam import GradCAM
 from app.ml.severity_estimator import estimate_disease_severity
+from app.services.dataset_manager import get_dataset_manager
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ class DiseaseClassifier:
     Grad-CAM activation heatmaps, and HSV leaf severity percentage estimation.
     """
 
-    def __init__(self, weights_path: Optional[Path] = None):
+    def __init__(self, weights_path: Optional[Path] = None, use_dataset_classes: bool = True):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu") if _HAS_TORCH else "cpu"
         self.weights_path = weights_path or (WEIGHTS_PATH if WEIGHTS_PATH.exists() else ALT_WEIGHTS_PATH)
         self.model = None
@@ -71,6 +72,7 @@ class DiseaseClassifier:
         self.classes: List[str] = DEFAULT_CLASSES
         self.is_fallback: bool = True
         self.gradcam_engine = None
+        self.use_dataset_classes = use_dataset_classes
 
         # Image Transformation Pipeline
         if _HAS_TORCH:
@@ -95,6 +97,17 @@ class DiseaseClassifier:
             self.is_fallback = True
             return
 
+        # Try to load class names from Kaggle dataset if enabled
+        if self.use_dataset_classes:
+            try:
+                dataset_manager = get_dataset_manager()
+                dataset_classes = dataset_manager.get_class_directories()
+                if dataset_classes:
+                    self.classes = dataset_classes
+                    logger.info(f"Loaded {len(dataset_classes)} classes from Kaggle dataset")
+            except Exception as exc:
+                logger.warning(f"Failed to load classes from dataset: {exc}. Using default classes.")
+
         if not self.weights_path.exists():
             logger.warning(
                 "Model weights not found at %s. Running DiseaseClassifier in fallback/scaffold mode.",
@@ -108,7 +121,8 @@ class DiseaseClassifier:
             checkpoint = torch.load(self.weights_path, map_location=self.device)
 
             if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
-                self.classes = checkpoint.get("classes", DEFAULT_CLASSES)
+                # Use checkpoint classes if available, otherwise use dataset/default classes
+                self.classes = checkpoint.get("classes", self.classes)
                 self.temperature = float(checkpoint.get("temperature", 1.0))
                 num_classes = len(self.classes)
 
@@ -118,7 +132,7 @@ class DiseaseClassifier:
                 model.load_state_dict(checkpoint["model_state_dict"])
             else:
                 # Direct state dict
-                num_classes = len(DEFAULT_CLASSES)
+                num_classes = len(self.classes)
                 model = models.efficientnet_b0(weights=None)
                 model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
                 model.load_state_dict(checkpoint)
