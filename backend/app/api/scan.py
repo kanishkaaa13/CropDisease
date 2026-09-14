@@ -8,6 +8,7 @@ from PIL import Image
 
 from app.models.schemas import ScanResponse
 from app.ml.disease_classifier import get_disease_classifier
+from app.ml.image_quality import check_image_quality, get_farmer_friendly_message
 from app.services.dataset_manager import get_dataset_manager
 
 router = APIRouter()
@@ -49,6 +50,23 @@ async def scan_crop_disease(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Unable to decode image file. Please upload a valid image."
+            )
+
+        # Run image quality check BEFORE disease classification
+        quality_result = check_image_quality(pil_image)
+        
+        if not quality_result["passed"]:
+            # Return 422 with quality issues and farmer-friendly message
+            farmer_message = get_farmer_friendly_message(quality_result["issues"])
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "error": "Image quality check failed",
+                    "issues": quality_result["issues"],
+                    "farmer_message": farmer_message,
+                    "blur_score": quality_result["blur_score"],
+                    "brightness_score": quality_result["brightness_score"],
+                }
             )
 
         # Run DiseaseClassifier diagnostic pipeline
