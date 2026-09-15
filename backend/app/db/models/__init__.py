@@ -14,6 +14,7 @@ from app.db.models.alert import Alert, AlertLevel
 from app.db.models.expert_validation import ExpertValidation, ValidationVerdict
 from app.db.models.follow_up import FollowUp, FollowUpStatus
 from app.db.models.pest_trap import PestTrapReading
+from app.db.models.historical_outbreak import HistoricalOutbreak
 
 __all__ = [
     "Base",
@@ -35,4 +36,5 @@ __all__ = [
     "FollowUp",
     "FollowUpStatus",
     "PestTrapReading",
+    "HistoricalOutbreak",
 ]
