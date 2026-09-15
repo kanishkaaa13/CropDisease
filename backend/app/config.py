@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    db_url: str = "postgresql://krushi:krushi_pass@localhost:5432/krushirakshak"
+    db_url: str = "postgresql://postgres:Postgres%4012345@localhost:5432/krushirakshak"
     db_echo: bool = False
     secret_key: str = "change-me"
     weather_api_key: str = ""

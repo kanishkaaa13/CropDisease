@@ -2,6 +2,7 @@
 Weather Service Module.
 Fetches weather data from Open-Meteo API, engineers features, and computes weather-based disease risk.
 """
+import asyncio
 import logging
 import time
 from typing import Dict, Any, Optional, TypedDict
@@ -248,3 +249,28 @@ def compute_weather_risk(features: WeatherFeatures) -> float:
                  f"temp: {temp_risk:.2f}, precip: {precip_risk:.2f}, humidity: {humidity_risk:.2f})")
     
     return risk_score
+
+
+def get_weather_risk(lat: float, lon: float) -> Dict[str, Any]:
+    """Fetch weather for a location and return the API-friendly risk summary."""
+    snapshot = asyncio.run(fetch_weather(lat, lon))
+    features = engineer_weather_features(snapshot)
+    risk_score = compute_weather_risk(features)
+
+    if risk_score < 35:
+        risk_level = "low"
+        description = "Conditions are relatively unfavorable for disease spread."
+    elif risk_score < 70:
+        risk_level = "medium"
+        description = "Moderate disease pressure is expected under current weather conditions."
+    else:
+        risk_level = "high"
+        description = "High humidity and moisture favor rapid disease development."
+
+    return {
+        "temperature": snapshot.temperature,
+        "humidity": snapshot.humidity,
+        "wind_speed": snapshot.wind_speed,
+        "description": description,
+        "risk_level": risk_level,
+    }
