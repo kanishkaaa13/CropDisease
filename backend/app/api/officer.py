@@ -8,8 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-logger = logging.getLogger(__name__)
-
+logger = logging.getLogger(__name__
 from app.db.connection import get_db
 from app.models.schemas import OfficerDashboardStats, ExpertValidationRequest, ExpertValidationResponse
 from app.services.risk_engine import compute_district_risk

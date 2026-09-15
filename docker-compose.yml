@@ -1,24 +1,6 @@
 version: "3.9"
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: krushi_postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: krushi
-      POSTGRES_PASSWORD: krushi_pass
-      POSTGRES_DB: krushirakshak
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U krushi -d krushirakshak"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   backend:
     build:
       context: ./backend
@@ -28,14 +10,11 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      DB_URL: postgresql://krushi:krushi_pass@postgres:5432/krushirakshak
+      DB_URL: postgresql://krushi:Postgres%4012345@host.docker.internal:5432/krushirakshak
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 15s
@@ -61,6 +40,3 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-
-volumes:
-  pgdata:
