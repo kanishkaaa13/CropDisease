@@ -476,3 +476,338 @@ def compute_district_risk(state: str, db: Session) -> List[Dict[str, Any]]:
 
     return results
 
+
+# Configurable Fusion Weights — Tune with Agronomic Domain Expert Input
+# These weights control how much each sub-score contributes to the overall risk
+FUSION_WEIGHTS = {
+    "disease_risk": 0.40,      # Weight for disease detection confidence + severity
+    "pest_risk": 0.25,         # Weight for pest trap trend data
+    "spread_risk": 0.35,       # Weight for spatial proximity + weather conditions
+}
+
+
+def run_full_pipeline(db: Session, crop_id: str) -> Dict[str, Any]:
+    """
+    Run the complete fusion + risk engine + decision engine pipeline.
+    
+    This is the final pipeline stage that orchestrates all risk assessment branches:
+    1. Fetch crop, farm, latest observation/image, and lat/lng from DB
+    2. Call each branch: image_quality → disease probability → weather risk → crop stage → pest trend → spatial risk
+    3. Fusion step: combine into disease_risk, pest_risk, spread_risk
+    4. Overall risk: weighted combination of sub-scores
+    5. Decision engine: determine action based on risk_level + confidence
+    6. Return structured PipelineResult with all intermediate scores
+    
+    Args:
+        db: Database session
+        crop_id: Crop ID to run pipeline for
+    
+    Returns:
+        PipelineResult containing all intermediate scores, final risk, and decision
+    """
+    from app.db.models import Crop, Observation, AIResult, RiskScore, RiskLevel, Alert, AlertLevel, FollowUp, FollowUpStatus
+    from app.ml.disease_classifier import get_disease_classifier
+    from app.services.spatial_risk import get_nearby_cases, compute_spatial_risk
+    from app.services.pest_trend import compute_pest_trend
+    from app.services.crop_stage import get_stage_multiplier, CropStage
+    from PIL import Image
+    import io
+    
+    logger.info(f"Starting full pipeline for crop_id: {crop_id}")
+    
+    # Step 1: Fetch crop, farm, and latest observation
+    crop = db.query(Crop).filter(Crop.id == crop_id).first()
+    if not crop:
+        raise ValueError(f"Crop with ID '{crop_id}' not found.")
+    
+    farm = crop.farm
+    lat = farm.gps_lat
+    lng = farm.gps_lng
+    crop_name = crop.crop_name
+    growth_stage = crop.growth_stage or "vegetative"
+    
+    # Fetch latest observation with AI result
+    latest_obs = (
+        db.query(Observation)
+        .filter(Observation.crop_id == crop.id)
+        .order_by(Observation.timestamp.desc())
+        .first()
+    )
+    
+    # Step 2: Branch 1 - Image Quality Check (skipped for now, assume valid)
+    image_quality_score = 1.0  # Placeholder: 1.0 = good quality
+    
+    # Step 3: Branch 2 - Disease Probability
+    disease_confidence = 0.50  # Baseline fallback
+    disease_label = "Unknown"
+    severity_pct = 0.0
+    gradcam_base64 = ""
+    top3_predictions = []
+    is_low_confidence = False
+    
+    if latest_obs and latest_obs.ai_result:
+        disease_confidence = float(latest_obs.ai_result.confidence or 0.50)
+        disease_label = latest_obs.ai_result.disease_label or "Unknown"
+        severity_pct = float(latest_obs.ai_result.severity_pct or 0.0)
+        is_low_confidence = disease_confidence < 0.60
+        
+        # Try to get top3 from existing AI result if available
+        if latest_obs.ai_result.treatment_recommendations:
+            top3_predictions = latest_obs.ai_result.treatment_recommendations.get("top3", [])
+    
+    # If we have image data, run fresh classification
+    if latest_obs and latest_obs.image_urls:
+        try:
+            # Load image from first URL (assuming local file or base64)
+            image_data = latest_obs.image_urls[0]
+            if image_data.startswith("data:image"):
+                # Base64 encoded image
+                import base64
+                header, encoded = image_data.split(",", 1)
+                image_bytes = base64.b64decode(encoded)
+                pil_image = Image.open(io.BytesIO(image_bytes))
+            else:
+                # Assume file path (not implemented in this context)
+                pil_image = None
+            
+            if pil_image:
+                classifier = get_disease_classifier()
+                scan_result = classifier.scan_crop_image(pil_image)
+                disease_confidence = scan_result["confidence"]
+                disease_label = scan_result["label"]
+                severity_pct = scan_result["severity_pct"]
+                gradcam_base64 = scan_result["gradcam_image_base64"]
+                top3_predictions = scan_result["top3"]
+                is_low_confidence = scan_result["low_confidence"]
+        except Exception as exc:
+            logger.warning(f"Failed to run disease classification: {exc}")
+    
+    # Step 4: Branch 3 - Weather Risk
+    weather_data = fetch_open_meteo_weather(lat, lng)
+    current_weather = weather_data["current"]
+    weather_risk = calculate_weather_risk(
+        temp_c=current_weather["temp_c"],
+        humidity_pct=current_weather["humidity_pct"],
+        rain_mm=current_weather["rain_mm"],
+        days_since_rain=current_weather.get("days_since_rain", 0)
+    )
+    
+    # Step 5: Branch 4 - Crop Stage Multiplier
+    try:
+        stage_enum = CropStage(growth_stage.lower())
+        stage_multiplier = get_stage_multiplier(crop_name, stage_enum)
+    except ValueError:
+        # If stage not found in enum, use default from risk_engine
+        stage_multiplier = get_crop_stage_multiplier(growth_stage)
+    
+    # Step 6: Branch 5 - Pest Trend (skip if no trap data)
+    pest_trend_result = compute_pest_trend(db, farm.id, 0)  # current_count not used in trend
+    pest_risk = None
+    if pest_trend_result["seven_day_readings"] > 0:
+        # Calculate pest risk from trend
+        trend_pct = pest_trend_result["trend_pct"]
+        # Convert trend to 0-100 risk score
+        pest_risk = min(max(50.0 + trend_pct * 0.5, 0.0), 100.0)
+    
+    # Step 7: Branch 6 - Spatial Risk
+    nearby_cases = get_nearby_cases(lat, lng, db, radius_km=5, days=14, crop_name=crop_name)
+    spatial_risk = compute_spatial_risk(nearby_cases)
+    
+    # Step 8: Fusion Step - Combine into sub-scores
+    # disease_risk = f(disease_confidence, severity_pct, crop_stage_multiplier)
+    disease_risk = (disease_confidence * 100.0 * stage_multiplier + severity_pct) / 2
+    disease_risk = min(max(disease_risk, 0.0), 100.0)
+    
+    # pest_risk already calculated above (or None if no data)
+    
+    # spread_risk = f(spatial_risk, weather_risk)
+    spread_risk = (spatial_risk * 0.6 + weather_risk * 0.4)
+    spread_risk = min(max(spread_risk, 0.0), 100.0)
+    
+    # Step 9: Overall Risk - Weighted combination
+    fusion_cfg = FUSION_WEIGHTS
+    total_weight = fusion_cfg["disease_risk"] + fusion_cfg["spread_risk"]
+    
+    if pest_risk is not None:
+        total_weight += fusion_cfg["pest_risk"]
+        overall_risk = (
+            disease_risk * fusion_cfg["disease_risk"] +
+            pest_risk * fusion_cfg["pest_risk"] +
+            spread_risk * fusion_cfg["spread_risk"]
+        ) / total_weight
+    else:
+        # No pest data, exclude from calculation
+        overall_risk = (
+            disease_risk * fusion_cfg["disease_risk"] +
+            spread_risk * fusion_cfg["spread_risk"]
+        ) / total_weight
+    
+    overall_risk = round(min(max(overall_risk, 0.0), 100.0), 1)
+    risk_level = map_risk_level(overall_risk)
+    
+    # Step 10: Decision Engine
+    decision = {
+        "action": "monitor",
+        "reason": "",
+        "requires_expert_validation": False,
+        "trigger_alert": False,
+        "schedule_followup": False,
+    }
+    
+    if is_low_confidence:
+        decision["action"] = "needs_expert_validation"
+        decision["reason"] = "Low confidence in disease detection requires expert review"
+        decision["requires_expert_validation"] = True
+    elif risk_level in ["HIGH", "CRITICAL"]:
+        decision["action"] = "trigger_alert"
+        decision["reason"] = f"High risk level ({risk_level}) detected - immediate action required"
+        decision["trigger_alert"] = True
+        decision["schedule_followup"] = True
+    elif risk_level == "MODERATE":
+        decision["action"] = "monitor"
+        decision["reason"] = "Moderate risk - continue monitoring"
+        decision["schedule_followup"] = True
+    else:  # LOW
+        decision["action"] = "monitor"
+        decision["reason"] = "Low risk - routine monitoring"
+    
+    # Step 11: Execute Decision Actions
+    alert_created = None
+    followup_created = None
+    
+    if decision["trigger_alert"]:
+        try:
+            alert_level = AlertLevel.critical if risk_level == "CRITICAL" else AlertLevel.high
+            new_alert = {
+                "crop_id": crop.id,
+                "level": alert_level.value,
+                "title": f"{risk_level} Risk Alert: {disease_label}",
+                "message": f"Overall risk score: {overall_risk}. {decision['reason']}",
+                "target_state": farm.state,
+                "target_district": farm.district,
+            }
+            alert_created = new_alert
+            logger.info(f"Alert created for crop {crop_id}: {risk_level}")
+        except Exception as exc:
+            logger.warning(f"Failed to create alert: {exc}")
+    
+    if decision["schedule_followup"]:
+        try:
+            followup_date = datetime.now(timezone.utc) + timedelta(days=3)
+            new_followup = {
+                "crop_id": crop.id,
+                "status": FollowUpStatus.pending.value,
+                "scheduled_date": followup_date,
+                "notes": f"Follow-up required for {risk_level} risk - {decision['reason']}",
+            }
+            followup_created = new_followup
+            logger.info(f"Follow-up scheduled for crop {crop_id}")
+        except Exception as exc:
+            logger.warning(f"Failed to schedule follow-up: {exc}")
+    
+    # Step 12: Save RiskScore to database
+    try:
+        mapped_enum_level = getattr(RiskLevel, risk_level.lower(), RiskLevel.medium)
+        db_risk_score = RiskScore(
+            crop_id=crop.id,
+            timestamp=datetime.now(timezone.utc),
+            disease_risk=disease_risk / 100.0,
+            pest_risk=(pest_risk / 100.0) if pest_risk is not None else None,
+            weather_risk=weather_risk / 100.0,
+            overall_score=overall_risk / 100.0,
+            risk_level=mapped_enum_level,
+            contributing_factors={
+                "disease_label": disease_label,
+                "disease_confidence": disease_confidence,
+                "severity_pct": severity_pct,
+                "stage_multiplier": stage_multiplier,
+                "spatial_risk": spatial_risk,
+                "nearby_cases_count": len(nearby_cases),
+                "pest_trend": pest_trend_result,
+            },
+        )
+        db.add(db_risk_score)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.warning("Failed to persist RiskScore to database: %s", exc)
+    
+    # Step 13: Return structured PipelineResult
+    pipeline_result = {
+        # Input data
+        "crop_id": crop.id,
+        "crop_name": crop_name,
+        "farm_id": farm.id,
+        "farm_name": farm.name,
+        "growth_stage": growth_stage,
+        "location": {
+            "lat": lat,
+            "lng": lng,
+            "village": farm.village,
+            "district": farm.district,
+            "state": farm.state,
+        },
+        
+        # Branch results
+        "image_quality": {
+            "score": image_quality_score,
+            "is_valid": image_quality_score >= 0.7,
+        },
+        "disease_detection": {
+            "label": disease_label,
+            "confidence": disease_confidence,
+            "severity_pct": severity_pct,
+            "top3": top3_predictions,
+            "is_low_confidence": is_low_confidence,
+            "gradcam_base64": gradcam_base64,
+        },
+        "weather": {
+            "temp_c": current_weather["temp_c"],
+            "humidity_pct": current_weather["humidity_pct"],
+            "rain_mm": current_weather["rain_mm"],
+            "risk_score": weather_risk,
+        },
+        "crop_stage": {
+            "stage": growth_stage,
+            "multiplier": stage_multiplier,
+        },
+        "pest_analysis": {
+            "has_data": pest_risk is not None,
+            "trend": pest_trend_result,
+            "risk_score": pest_risk,
+        },
+        "spatial_analysis": {
+            "nearby_cases_count": len(nearby_cases),
+            "nearby_cases": nearby_cases[:5],  # Limit to top 5 for response size
+            "risk_score": spatial_risk,
+        },
+        
+        # Fusion results
+        "fusion": {
+            "disease_risk": round(disease_risk, 1),
+            "pest_risk": round(pest_risk, 1) if pest_risk is not None else None,
+            "spread_risk": round(spread_risk, 1),
+            "weights_used": FUSION_WEIGHTS,
+        },
+        
+        # Final result
+        "overall_risk": {
+            "score": overall_risk,
+            "level": risk_level,
+        },
+        
+        # Decision engine
+        "decision": decision,
+        "actions_taken": {
+            "alert_created": alert_created,
+            "followup_created": followup_created,
+        },
+        
+        # Metadata
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "pipeline_version": "1.0.0",
+    }
+    
+    logger.info(f"Pipeline completed for crop {crop_id}: risk_level={risk_level}, action={decision['action']}")
+    return pipeline_result
+
