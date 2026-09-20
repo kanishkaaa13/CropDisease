@@ -1,5 +1,6 @@
 import uuid
 import logging
+import io
 from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, status
