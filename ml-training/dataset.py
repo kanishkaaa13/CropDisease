@@ -76,10 +76,27 @@ class AlbumentationsDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, int]:
         img_path = self.file_paths[idx]
-        image = cv2.imread(img_path)
+        image = None
+
+        # 1. Try OpenCV first
+        try:
+            image = cv2.imread(img_path)
+            if image is not None:
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        except Exception:
+            pass
+
+        # 2. Fallback to PIL if OpenCV fails (handles corrupt/truncated JPEG markers)
         if image is None:
-            raise ValueError(f"Could not load image at {img_path}")
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            try:
+                from PIL import Image, ImageFile
+                ImageFile.LOAD_TRUNCATED_IMAGES = True
+                with Image.open(img_path) as pil_img:
+                    pil_img = pil_img.convert("RGB")
+                    image = np.array(pil_img)
+            except Exception:
+                # If image is completely unreadable/corrupted, pick another sample
+                return self.__getitem__((idx + 1) % len(self.file_paths))
 
         if self.transform:
             augmented = self.transform(image=image)
@@ -87,6 +104,7 @@ class AlbumentationsDataset(Dataset):
 
         label = self.labels[idx]
         return image, label
+
 
 
 def prepare_dataset_splits(
