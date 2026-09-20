@@ -26,7 +26,7 @@ def create_test_image(width=300, height=300, brightness=128, blur=False):
 
 
 def create_green_leaf_image(width=300, height=300):
-    """Create a test image with green leaf-like colors."""
+    """Create a test image with green leaf-like colors and sharp vein texture."""
     # Create a gradient of green colors
     img_array = np.zeros((height, width, 3), dtype=np.uint8)
     for i in range(height):
@@ -34,8 +34,15 @@ def create_green_leaf_image(width=300, height=300):
             # Vary green channel to create leaf-like appearance
             green = int(100 + (i / height) * 100)
             img_array[i, j] = [50, green, 30]
+
+    # Add sharp vein structures to simulate high-frequency texture of a real in-focus leaf
+    for i in range(0, height, 12):
+        img_array[i, :, :] = [30, 220, 20]
+    for j in range(0, width, 12):
+        img_array[:, j, :] = [20, 70, 10]
     
     return Image.fromarray(img_array)
+
 
 
 def test_blur_detection():

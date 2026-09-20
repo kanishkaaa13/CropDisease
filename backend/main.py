@@ -11,6 +11,9 @@ except Exception as exc:
     import logging
     logging.getLogger("main").warning("Database connection failed on startup (%s). Tables not auto-created.", exc)
 
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
 app = FastAPI(
     title="KrushiRakshak AI",
     description="AI-powered crop disease detection and advisory system for Indian farmers",
@@ -19,6 +22,13 @@ app = FastAPI(
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
 )
+
+# Static media uploads directory for scan images
+uploads_dir = Path(__file__).parent / "uploads"
+uploads_dir.mkdir(parents=True, exist_ok=True)
+(uploads_dir / "scans").mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+
 
 # CORS — allow frontend dev server
 app.add_middleware(

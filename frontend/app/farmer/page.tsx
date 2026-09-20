@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { api, type ScanResponse, type RiskScoreResponse, type AdvisoryResponse } from "@/lib/api";
 import { detectBlur } from "@/lib/blurDetection";
 import FarmCard from "@/components/farmer/FarmCard";
@@ -30,22 +30,8 @@ interface Alert {
 
 const LANGUAGES = [
   { code: "en", label: "English" },
-  { code: "hi", label: "हिंदी" },
-  { code: "mr", label: "मराठी" },
-];
-
-// Mock farm data - in production, this would come from the API
-const MOCK_FARMS: Farm[] = [
-  { id: "1", name: "Main Field", cropName: "Tomato", healthScore: 85, riskLevel: "LOW", lastScanDate: "2026-09-10", lastSeverityPct: 25, needsFollowUp: false },
-  { id: "2", name: "North Plot", cropName: "Cotton", healthScore: 62, riskLevel: "MODERATE", lastScanDate: "2026-09-08", lastSeverityPct: 42, needsFollowUp: true },
-  { id: "3", name: "East Section", cropName: "Chilli", healthScore: 45, riskLevel: "HIGH", lastScanDate: "2026-09-05", lastSeverityPct: 65, needsFollowUp: true },
-];
-
-// Mock alerts data - in production, this would come from the API
-const MOCK_ALERTS: Alert[] = [
-  { id: "1", farmName: "East Section", cropName: "Chilli", disease: "Leaf Curl Virus", riskLevel: "HIGH", timestamp: "2026-09-11T10:30:00Z", severityPct: 65 },
-  { id: "2", farmName: "North Plot", cropName: "Cotton", disease: "Bollworm", riskLevel: "MODERATE", timestamp: "2026-09-09T14:15:00Z", severityPct: 42 },
-  { id: "3", farmName: "Main Field", cropName: "Tomato", disease: "Early Blight", riskLevel: "LOW", timestamp: "2026-09-07T09:00:00Z", severityPct: 25 },
+  { code: "hi", label: "हिंदी (Beta)" },
+  { code: "mr", label: "मराठी (Beta)" },
 ];
 
 export default function FarmerPage() {
@@ -64,6 +50,59 @@ export default function FarmerPage() {
   const [error, setError] = useState<string | null>(null);
   const [blurError, setBlurError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Dynamic state loaded from backend API
+  const [farms, setFarms] = useState<Farm[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [farmerId, setFarmerId] = useState<string>("seed-farmer-1");
+  const [fetchingData, setFetchingData] = useState<boolean>(true);
+  const [showAddFarmModal, setShowAddFarmModal] = useState<boolean>(false);
+  const [newFarmName, setNewFarmName] = useState("");
+  const [newCropType, setNewCropType] = useState("Tomato");
+  const [newVillage, setNewVillage] = useState("Nashik");
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setFetchingData(true);
+        const remoteFarms = await api.getFarmerFarms(farmerId);
+        if (remoteFarms && remoteFarms.length > 0) {
+          setFarms(remoteFarms.map((f: any) => ({
+            id: f.id,
+            name: f.name,
+            cropName: f.crop_name || "Tomato",
+            healthScore: 85,
+            riskLevel: "LOW",
+            lastScanDate: f.created_at ? f.created_at.slice(0, 10) : null,
+            lastSeverityPct: null,
+            needsFollowUp: false,
+          })));
+        } else {
+          // If no farms registered yet in DB, default to empty state
+          setFarms([]);
+        }
+
+        const reports = await api.getFarmerReports(farmerId);
+        if (reports && reports.length > 0) {
+          setAlerts(reports.map((r: any) => ({
+            id: r.report_id,
+            farmName: "My Field",
+            cropName: r.crop_type,
+            disease: r.disease_name || "Observation",
+            riskLevel: r.severity && parseFloat(r.severity) > 50 ? "HIGH" : "LOW",
+            timestamp: r.created_at,
+            severityPct: r.severity && parseFloat(r.severity) ? parseFloat(r.severity) : 20,
+          })));
+        }
+      } catch (err) {
+        console.warn("Could not fetch remote farms/alerts:", err);
+      } finally {
+        setFetchingData(false);
+      }
+    }
+    loadData();
+  }, [farmerId]);
+
 
   function handleScanCrop(farm: Farm) {
     setSelectedFarm(farm);
@@ -107,6 +146,10 @@ export default function FarmerPage() {
     try {
       const fd = new FormData();
       fd.append("file", imageFile);
+      if (selectedFarm) {
+        fd.append("farmer_id", farmerId);
+        fd.append("crop_id", selectedFarm.id);
+      }
 
       // 1. Scan image with AI classifier + Grad-CAM + HSV severity
       setLoadingStep("Analyzing leaf with AI...");
@@ -135,6 +178,60 @@ export default function FarmerPage() {
     } finally {
       setLoading(false);
       setLoadingStep("");
+    }
+  }
+
+  async function handleCreateFarm(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newFarmName.trim()) return;
+    try {
+      setLoading(true);
+      const createdFarm = await api.createFarm({
+        owner_id: farmerId,
+        name: newFarmName,
+        village: newVillage || "Nashik",
+        taluka: "Nashik",
+        district: "Nashik",
+        state: "Maharashtra",
+        gps_lat: 19.9975,
+        gps_lng: 73.7898,
+        area_acres: 2.5,
+      });
+
+      let cropName = newCropType;
+      try {
+        const createdCrop = await api.createCrop({
+          farm_id: createdFarm.id,
+          crop_type: newCropType,
+          sowing_date: new Date().toISOString(),
+          stage: "vegetative",
+          acreage: 2.5,
+        });
+        cropName = createdCrop.crop_type;
+      } catch (cropErr) {
+        console.warn("Crop creation error:", cropErr);
+      }
+
+      setFarms((prev) => [
+        ...prev,
+        {
+          id: createdFarm.id,
+          name: createdFarm.name,
+          cropName: cropName,
+          healthScore: 90,
+          riskLevel: "LOW",
+          lastScanDate: null,
+          lastSeverityPct: null,
+          needsFollowUp: false,
+        },
+      ]);
+      setShowAddFarmModal(false);
+      setNewFarmName("");
+    } catch (err) {
+      console.error("Failed to create farm:", err);
+      alert("Failed to register farm. Please verify backend is running.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -171,36 +268,125 @@ export default function FarmerPage() {
   if (screen === "home") {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            🌱 My Farms
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">Select a farm to scan for diseases</p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              🌱 My Farms
+            </h1>
+            <p className="text-slate-400 text-sm mt-1">Select a farm to scan for diseases</p>
+          </div>
+          <button
+            onClick={() => setShowAddFarmModal(true)}
+            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-lg"
+          >
+            + Add Farm
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {MOCK_FARMS.map((farm) => (
-            <FarmCard
-              key={farm.id}
-              farmName={farm.name}
-              cropName={farm.cropName}
-              healthScore={farm.healthScore}
-              riskLevel={farm.riskLevel}
-              needsFollowUp={farm.needsFollowUp}
-              onScan={() => handleScanCrop(farm)}
-            />
-          ))}
-        </div>
+        {fetchingData ? (
+          <div className="text-center py-12 text-slate-400">Loading farms from server...</div>
+        ) : farms.length === 0 ? (
+          <div className="glass p-8 rounded-2xl text-center max-w-md mx-auto my-8 border border-white/10">
+            <div className="text-5xl mb-4">🌾</div>
+            <h3 className="text-lg font-bold text-white mb-2">No farms registered yet</h3>
+            <p className="text-sm text-slate-400 mb-6">
+              Register your first farm plot to start monitoring crop health and scanning leaves for disease.
+            </p>
+            <button
+              onClick={() => setShowAddFarmModal(true)}
+              className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm transition-all"
+            >
+              + Register New Farm
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {farms.map((farm) => (
+              <FarmCard
+                key={farm.id}
+                farmName={farm.name}
+                cropName={farm.cropName}
+                healthScore={farm.healthScore}
+                riskLevel={farm.riskLevel}
+                needsFollowUp={farm.needsFollowUp}
+                onScan={() => handleScanCrop(farm)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Modal for adding new farm */}
+        {showAddFarmModal && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="glass p-6 rounded-2xl max-w-md w-full border border-white/20">
+              <h2 className="text-xl font-bold text-white mb-4">🌱 Register New Farm</h2>
+              <form onSubmit={handleCreateFarm} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Farm Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Main Plot"
+                    value={newFarmName}
+                    onChange={(e) => setNewFarmName(e.target.value)}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Primary Crop</label>
+                  <select
+                    value={newCropType}
+                    onChange={(e) => setNewCropType(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-800 border border-white/10 rounded-lg text-white text-sm"
+                  >
+                    <option value="Tomato">Tomato</option>
+                    <option value="Maize">Maize</option>
+                    <option value="Cassava">Cassava</option>
+                    <option value="Cashew">Cashew</option>
+                    <option value="Cotton">Cotton</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Village / Location</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Nashik"
+                    value={newVillage}
+                    onChange={(e) => setNewVillage(e.target.value)}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm"
+                  />
+                </div>
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddFarmModal(false)}
+                    className="px-4 py-2 text-slate-400 hover:text-white text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-sm"
+                  >
+                    {loading ? "Saving..." : "Save Farm"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         <button
           onClick={() => setScreen("alerts")}
           className="mt-6 w-full py-3 glass border border-white/10 text-slate-300 rounded-xl text-sm font-semibold hover:bg-white/5 transition-all"
         >
-          🔔 View Alerts
+          🔔 View Past Reports & Alerts ({alerts.length})
         </button>
       </div>
     );
   }
+
 
   // Render Scan Screen
   if (screen === "scan") {
@@ -493,25 +679,36 @@ export default function FarmerPage() {
           <p className="text-slate-400 text-sm mt-1">Past disease alerts and notifications</p>
         </div>
 
-        <div className="space-y-3">
-          {MOCK_ALERTS.map((alert) => (
-            <div key={alert.id} className="glass p-4 rounded-xl border border-white/10">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <p className="font-bold text-white">{alert.farmName}</p>
-                  <p className="text-sm text-slate-400">{alert.cropName} • {alert.disease}</p>
+        {alerts.length === 0 ? (
+          <div className="glass p-8 rounded-2xl text-center max-w-md mx-auto my-8 border border-white/10">
+            <div className="text-4xl mb-3">🔔</div>
+            <h3 className="text-base font-bold text-white mb-1">No alerts or past scans</h3>
+            <p className="text-xs text-slate-400">
+              When you scan crops or disease outbreaks are detected nearby, reports will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {alerts.map((alert) => (
+              <div key={alert.id} className="glass p-4 rounded-xl border border-white/10">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="font-bold text-white">{alert.farmName}</p>
+                    <p className="text-sm text-slate-400">{alert.cropName} • {alert.disease}</p>
+                  </div>
+                  <span className={`px-2 py-1 rounded-lg text-xs font-bold ${riskColors[alert.riskLevel] || riskColors.LOW}`}>
+                    {alert.riskLevel}
+                  </span>
                 </div>
-                <span className={`px-2 py-1 rounded-lg text-xs font-bold ${riskColors[alert.riskLevel]}`}>
-                  {alert.riskLevel}
-                </span>
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>{formatDate(alert.timestamp)}</span>
+                  <span>Severity: {alert.severityPct}%</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>{formatDate(alert.timestamp)}</span>
-                <span>Severity: {alert.severityPct}%</span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
+
       </div>
     );
   }

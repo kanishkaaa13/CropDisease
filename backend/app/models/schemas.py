@@ -23,6 +23,9 @@ class ScanResponse(BaseModel):
     severity_pct: float = Field(..., description="Estimated percentage of leaf area affected (0.0 to 100.0)")
     gradcam_image_base64: str = Field(..., description="Base64 encoded PNG data URI of Grad-CAM heatmap overlay")
     low_confidence: bool = Field(..., description="True if top prediction confidence is below 0.60 threshold")
+    observation_id: Optional[str] = Field(None, description="Persisted observation record ID")
+    image_url: Optional[str] = Field(None, description="Relative URL of the stored scan image")
+
 
 
 class RiskScoreRequest(BaseModel):
@@ -169,5 +172,84 @@ class AdminCommandStats(BaseModel):
     total_farmers: int
     total_reports: int
     states_covered: int
-    model_accuracy: float
+    model_accuracy: Optional[float] = None
     alerts_issued: int
+
+
+class FarmerRegisterRequest(BaseModel):
+    name: str
+    phone: str
+    state: Optional[str] = None
+    district: Optional[str] = None
+    taluka: Optional[str] = None
+    village: Optional[str] = None
+    language_pref: Optional[str] = "en"
+
+
+class UserResponse(BaseModel):
+    id: str
+    name: str
+    phone: str
+    role: str
+    state: Optional[str] = None
+    district: Optional[str] = None
+    village: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class FarmCreateRequest(BaseModel):
+    owner_id: str
+    name: str
+    village: str
+    taluka: str
+    district: str
+    state: str
+    gps_lat: float
+    gps_lng: float
+    area_acres: float
+    soil_type: Optional[str] = None
+    irrigation_type: Optional[str] = None
+
+
+class FarmResponse(BaseModel):
+    id: str
+    owner_id: str
+    name: str
+    village: str
+    taluka: str
+    district: str
+    state: str
+    gps_lat: float
+    gps_lng: float
+    area_acres: float
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CropCreateRequest(BaseModel):
+    farm_id: str
+    crop_type: str
+    variety: Optional[str] = None
+    sowing_date: datetime
+    stage: Optional[str] = "vegetative"
+    acreage: Optional[float] = None
+
+
+class CropResponse(BaseModel):
+    id: str
+    farm_id: str
+    crop_type: str
+    variety: Optional[str] = None
+    sowing_date: datetime
+    stage: str
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+

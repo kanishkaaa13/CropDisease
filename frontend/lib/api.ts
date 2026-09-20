@@ -293,4 +293,21 @@ export const api = {
 
   adminRiskTrend: (state: string = "Maharashtra", days: number = 30) =>
     apiFetch<RiskTrendData[]>(`/api/admin/risk-trend?state=${encodeURIComponent(state)}&days=${days}`),
+
+  // Farmer endpoints
+  getFarmerFarms: (farmerId: string) =>
+    apiFetch<any[]>(`/api/farmer/farms/${encodeURIComponent(farmerId)}`),
+
+  getFarmerReports: (farmerId: string) =>
+    apiFetch<any[]>(`/api/farmer/reports/${encodeURIComponent(farmerId)}`),
+
+  registerFarmer: (data: { name: string; phone: string; district?: string; state?: string }) =>
+    apiFetch<any>("/api/farmer/register", { method: "POST", body: JSON.stringify(data) }),
+
+  createFarm: (data: any) =>
+    apiFetch<any>("/api/farmer/farms", { method: "POST", body: JSON.stringify(data) }),
+
+  createCrop: (data: any) =>
+    apiFetch<any>("/api/farmer/crops", { method: "POST", body: JSON.stringify(data) }),
 };
+

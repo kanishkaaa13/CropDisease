@@ -17,3 +17,7 @@ python-dotenv==1.0.1
 httpx==0.27.0
 alembic==1.13.1
 kagglehub
+pytest>=8.0.0
+passlib[bcrypt]>=1.7.4
+python-jose[cryptography]>=3.3.0
+geoalchemy2>=0.14.0

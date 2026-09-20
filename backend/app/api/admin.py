@@ -20,6 +20,8 @@ router = APIRouter()
 @router.get("/stats", response_model=AdminCommandStats, summary="National & State Command Center KPIs")
 def admin_command_stats(db: Session = Depends(get_db)):
     try:
+        import json
+        from pathlib import Path
         from app.db.models import User, UserRole, Observation, Farm, Alert
 
         total_farmers = db.query(User).filter(User.role == UserRole.farmer).count()
@@ -27,18 +29,33 @@ def admin_command_stats(db: Session = Depends(get_db)):
         states_count = db.query(Farm.state).distinct().count()
         alerts_count = db.query(Alert).count()
 
+        # Dynamic model accuracy from metrics artifact if available
+        accuracy = None
+        weights_metrics = Path(__file__).parent.parent / "ml" / "weights" / "metrics.json"
+        ml_metrics = Path(__file__).parent.parent.parent.parent / "ml-training" / "output" / "metrics.json"
+        for p in (weights_metrics, ml_metrics):
+            if p.exists():
+                try:
+                    with open(p, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        accuracy = round(float(data.get("accuracy", 0.0)) * 100, 1)
+                        break
+                except Exception:
+                    pass
+
         return AdminCommandStats(
-            total_farmers=total_farmers or 10,
-            total_reports=total_reports or 40,
-            states_covered=states_count or 1,
-            model_accuracy=94.2,
-            alerts_issued=alerts_count or 12,
+            total_farmers=total_farmers,
+            total_reports=total_reports,
+            states_covered=states_count,
+            model_accuracy=accuracy,
+            alerts_issued=alerts_count,
         )
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching admin command stats: {str(exc)}"
         )
+
 
 
 @router.post("/alert", summary="Broadcast emergency advisory alert to targeted district/state")
@@ -300,19 +317,40 @@ def get_risk_trend(
         start_date = datetime.now(timezone.utc) - timedelta(days=days)
 
         # Query daily average risk scores
+        from sqlalchemy import cast, Date
 
-        # For now, return mock data since we need proper time-series aggregation
-        # In production, this would use proper date truncation and aggregation
-        mock_trend = []
-        for i in range(days):
-            date = start_date + timedelta(days=i)
-            mock_trend.append({
-                "date": date.strftime("%Y-%m-%d"),
-                "avg_risk_score": 45.0 + (i % 10) * 2.5,  # Mock data with some variation
-                "case_count": 10 + (i % 5) * 3,
-            })
+        results = (
+            db.query(
+                cast(RiskScore.created_at, Date).label("entry_date"),
+                func.avg(RiskScore.overall_score).label("avg_risk"),
+                func.count(RiskScore.id).label("case_count"),
+            )
+            .filter(RiskScore.created_at >= start_date)
+            .group_by(cast(RiskScore.created_at, Date))
+            .order_by(cast(RiskScore.created_at, Date).asc())
+            .all()
+        )
 
-        return mock_trend
+        trend = []
+        if results:
+            for r in results:
+                date_str = r.entry_date.strftime("%Y-%m-%d") if hasattr(r.entry_date, "strftime") else str(r.entry_date)
+                trend.append({
+                    "date": date_str,
+                    "avg_risk_score": round(float(r.avg_risk) * 100, 1),
+                    "case_count": int(r.case_count),
+                })
+        else:
+            for i in range(days):
+                date_str = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
+                trend.append({
+                    "date": date_str,
+                    "avg_risk_score": 0.0,
+                    "case_count": 0,
+                })
+
+        return trend
+
 
     except Exception as exc:
         logger.error(f"Error fetching risk trend: {exc}")

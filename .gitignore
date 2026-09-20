@@ -1,0 +1,55 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python environments
+.venv/
+venv/
+ENV/
+env/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Databases & local stores
+*.db
+*.sqlite3
+backend/test.db
+backend/test_all_api.db
+backend/test_api_risk.db
+krushi.db
+
+# Machine Learning & Datasets
+backend/datasets/
+backend/app/ml/weights/*.pth
+ml-training/output/
+*.pth
+*.pt
+*.onnx
+
+# Uploads / Media storage
+backend/uploads/
+uploads/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+.npm/
+
+# Environment configs & secrets
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env.local
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

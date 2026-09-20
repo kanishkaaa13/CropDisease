@@ -1,6 +1,24 @@
 version: "3.9"
 
 services:
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: krushi_postgis
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: krushirakshak
+      POSTGRES_USER: krushi
+      POSTGRES_PASSWORD: Postgres@12345
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U krushi -d krushirakshak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
@@ -10,11 +28,15 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      DB_URL: postgresql://krushi:Postgres%4012345@host.docker.internal:5432/krushirakshak
+      DB_URL: postgresql://krushi:Postgres%4012345@db:5432/krushirakshak
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - uploads_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 15s
@@ -40,3 +62,7 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+
+volumes:
+  postgres_data:
+  uploads_data:
