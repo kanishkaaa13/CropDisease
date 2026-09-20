@@ -38,11 +38,14 @@ class ModelWithTemperature(nn.Module):
         logits = self.model(input_tensor)
         return self.temperature_scale(logits)
 
+    
     def temperature_scale(self, logits: torch.Tensor) -> torch.Tensor:
-        # Scale logits by temperature T
-        temperature = self.temperature.unsqueeze(1).expand(logits.size(0), logits.size(1))
-        return logits / temperature
 
+    # Scale logits by temperature T
+        temperature = self.temperature.to(logits.device)
+        temperature = temperature.unsqueeze(1).expand(logits.size(0), logits.size(1))
+
+        return logits / temperature
     def calibrate(self, val_loader: torch.utils.data.DataLoader, device: torch.device) -> float:
         """
         Optimize scalar T on validation dataset using L-BFGS to minimize NLL Loss.
@@ -234,7 +237,7 @@ def train_model(
     model.load_state_dict(torch.load(best_model_weights_path, map_location=device))
 
     # 4. Temperature Scaling Calibration
-    calibrated_model = ModelWithTemperature(model)
+    calibrated_model = ModelWithTemperature(model).to(device)
     learned_temperature = calibrated_model.calibrate(val_loader, device)
 
     # 5. Final Test Set Evaluation
