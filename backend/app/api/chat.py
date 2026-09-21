@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect, status
 from PIL import Image
 from sqlalchemy.orm import Session
 
@@ -21,6 +21,8 @@ from app.models.schemas import (
     ChatMessageResponse,
     ChatPageResponse,
 )
+from app.core.dependencies import get_current_user
+from app.core.security import decode_access_token
 
 router = APIRouter()
 ws_router = APIRouter()
@@ -65,13 +67,6 @@ def _schedule_broadcast(conversation_id: str, payload: dict) -> None:
     except RuntimeError:
         return
     loop.create_task(manager.broadcast(conversation_id, payload))
-
-
-def _user_id(user_id: Optional[str], header_user_id: Optional[str]) -> str:
-    resolved = user_id or header_user_id
-    if not resolved:
-        raise HTTPException(status_code=401, detail="Demo user identity is required via user_id or X-User-ID")
-    return resolved
 
 
 def _get_user(db: Session, user_id: str) -> User:
@@ -132,11 +127,10 @@ def _conversation_response(conversation: Conversation, db: Session, user_id: str
 @router.post("/chat/conversations", response_model=ChatConversationResponse)
 def create_conversation(
     payload: ChatConversationCreate,
-    user_id: Optional[str] = Query(None),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    requester_id = _user_id(user_id, x_user_id)
+    requester_id = current_user.id
     requester = _get_user(db, requester_id)
     farm = db.query(Farm).filter(Farm.id == payload.farm_id).first()
     if not farm or farm.owner_id != requester_id:
@@ -175,11 +169,10 @@ def create_conversation(
 
 @router.get("/chat/conversations", response_model=list[ChatConversationResponse])
 def list_conversations(
-    user_id: Optional[str] = Query(None),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    requester_id = _user_id(user_id, x_user_id)
+    requester_id = current_user.id
     _get_user(db, requester_id)
     conversations = db.query(Conversation).filter(
         (Conversation.farmer_id == requester_id) | (Conversation.officer_id == requester_id)
@@ -190,13 +183,12 @@ def list_conversations(
 @router.get("/chat/conversations/{conversation_id}/messages", response_model=ChatPageResponse)
 def get_messages(
     conversation_id: str,
-    user_id: Optional[str] = Query(None),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    requester_id = _user_id(user_id, x_user_id)
+    requester_id = current_user.id
     _conversation_for_user(db, conversation_id, requester_id)
     messages = db.query(Message).filter(Message.conversation_id == conversation_id).order_by(Message.created_at.asc()).offset(offset).limit(limit).all()
     total = db.query(Message).filter(Message.conversation_id == conversation_id).count()
@@ -207,11 +199,10 @@ def get_messages(
 def send_message(
     conversation_id: str,
     payload: ChatMessageCreate,
-    user_id: Optional[str] = Query(None),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    requester_id = _user_id(user_id, x_user_id)
+    requester_id = current_user.id
     conversation = _conversation_for_user(db, conversation_id, requester_id)
     sender = _get_user(db, requester_id)
     body = (payload.body or "").strip()
@@ -237,11 +228,10 @@ def send_message(
 @router.post("/chat/conversations/{conversation_id}/read")
 def mark_read(
     conversation_id: str,
-    user_id: Optional[str] = Query(None),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    requester_id = _user_id(user_id, x_user_id)
+    requester_id = current_user.id
     _conversation_for_user(db, conversation_id, requester_id)
     now = datetime.now(timezone.utc)
     count = db.query(Message).filter(
@@ -257,11 +247,10 @@ def mark_read(
 @router.post("/chat/attachments")
 async def upload_attachment(
     file: UploadFile = File(...),
-    user_id: Optional[str] = Query(None),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    requester_id = _user_id(user_id, x_user_id)
+    requester_id = current_user.id
     _get_user(db, requester_id)
     if file.content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(status_code=400, detail="Only JPEG, PNG, and WEBP images are allowed")
@@ -282,14 +271,20 @@ async def upload_attachment(
 
 @ws_router.websocket("/ws/chat/{conversation_id}")
 async def chat_socket(websocket: WebSocket, conversation_id: str):
-    user_id = websocket.query_params.get("user_id") or websocket.headers.get("x-user-id")
+    authorization = websocket.headers.get("authorization", "")
+    token = authorization.removeprefix("Bearer ").strip() or websocket.query_params.get("access_token")
     db = SessionLocal()
     try:
+        user_id = decode_access_token(token) if token else None
         if not user_id:
-            await websocket.close(code=4401, reason="user_id is required")
+            await websocket.close(code=4401, reason="Valid access token is required")
             return
+        authenticated_user = db.query(User).filter(User.email == user_id, User.is_active.is_(True)).first()
+        if not authenticated_user:
+            await websocket.close(code=4401, reason="Valid access token is required")
+            return
+        user_id = authenticated_user.id
         conversation = _conversation_for_user(db, conversation_id, user_id)
-        _get_user(db, user_id)
         await manager.connect(conversation.id, websocket)
         await websocket.send_json({"type": "connected", "conversation_id": conversation.id})
         while True:

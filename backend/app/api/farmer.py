@@ -11,7 +11,6 @@ from app.models.schemas import (
     FarmerReportSummary,
     WeatherResponse,
     FarmerRegisterRequest,
-    UserResponse,
     FarmCreateRequest,
     FarmResponse,
     CropCreateRequest,
@@ -21,6 +20,7 @@ from app.ml.disease_classifier import get_disease_classifier
 from app.services.weather import get_weather_risk
 from app.services.advisory import generate_advisory
 from app.core.dependencies import get_current_user, require_farmer
+from app.api.auth import UserRegister, UserResponse, create_user, user_response
 
 router = APIRouter()
 
@@ -31,25 +31,23 @@ router = APIRouter()
 
 @router.post("/register", response_model=UserResponse, summary="Register a new farmer")
 def register_farmer(payload: FarmerRegisterRequest, db: Session = Depends(get_db)):
-    """Create a new farmer user or return existing farmer if phone matches."""
-    existing_user = db.query(User).filter(User.phone == payload.phone).first()
-    if existing_user:
-        return existing_user
-
-    new_user = User(
-        name=payload.name,
+    """Compatibility wrapper for the secure authentication registration flow."""
+    new_user = create_user(db, UserRegister(
+        full_name=payload.name,
+        email=payload.email,
+        password=payload.password,
+        password_confirmation=payload.password_confirmation,
         phone=payload.phone,
         role=UserRole.farmer,
-        state=payload.state,
         district=payload.district,
-        taluka=payload.taluka,
-        village=payload.village,
-        language_pref=payload.language_pref or "en",
-    )
-    db.add(new_user)
+        preferred_language=payload.language_pref or "en",
+    ))
+    new_user.state = payload.state
+    new_user.taluka = payload.taluka
+    new_user.village = payload.village
     db.commit()
     db.refresh(new_user)
-    return new_user
+    return user_response(new_user)
 
 
 @router.post("/farms", response_model=FarmResponse, summary="Register a new farm plot")

@@ -33,6 +33,7 @@ class UserRegister(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=255, description="User's full name")
     email: EmailStr = Field(..., description="User's email address (must be unique)")
     password: str = Field(..., min_length=8, max_length=100, description="Password (min 8 characters)")
+    password_confirmation: Optional[str] = Field(None, min_length=8, max_length=100)
     phone: Optional[str] = Field(None, max_length=20, description="Phone number (optional)")
     role: UserRole = Field(default=UserRole.farmer, description="User role (farmer or officer)")
     district: Optional[str] = Field(None, max_length=100, description="District for officers")
@@ -43,6 +44,11 @@ class UserRegister(BaseModel):
     def validate_password(cls, v: str) -> str:
         if len(v) < 8:
             raise ValueError('Password must be at least 8 characters long')
+        return v
+
+    @field_validator("password_confirmation")
+    @classmethod
+    def validate_password_confirmation(cls, v: Optional[str]) -> Optional[str]:
         return v
 
 
@@ -65,6 +71,46 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+def user_response(user: User) -> UserResponse:
+    """Map database field names to the stable frontend authentication shape."""
+    return UserResponse(
+        id=user.id,
+        full_name=user.name,
+        email=user.email,
+        phone=user.phone,
+        role=user.role,
+        district=user.district,
+        preferred_language=user.language_pref,
+        created_at=user.created_at,
+    )
+
+
+def create_user(db: Session, user_data: UserRegister) -> User:
+    """Validate and persist a user using the single authentication path."""
+    if user_data.password_confirmation is not None and user_data.password != user_data.password_confirmation:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Passwords do not match")
+    if user_data.role == UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin registration is not allowed")
+    if get_user_by_email(db, user_data.email):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+    if user_data.phone and db.query(User).filter(User.phone == user_data.phone).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Phone number already registered")
+
+    new_user = User(
+        name=user_data.full_name.strip(),
+        email=str(user_data.email).lower(),
+        phone=user_data.phone,
+        password_hash=get_password_hash(user_data.password),
+        role=user_data.role,
+        district=user_data.district,
+        language_pref=user_data.preferred_language,
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
 
 
 class TokenResponse(BaseModel):
@@ -112,47 +158,14 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
     - **role**: Either 'farmer' or 'officer'
     - Returns JWT access token and user profile
     """
-    # Check if email already exists
-    existing_user = get_user_by_email(db, user_data.email)
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered"
-        )
-    
-    # Check if phone already exists (if provided)
-    if user_data.phone:
-        existing_phone = db.query(User).filter(User.phone == user_data.phone).first()
-        if existing_phone:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Phone number already registered"
-            )
-    
-    # Hash password
-    password_hash = get_password_hash(user_data.password)
-    
-    # Create user
-    new_user = User(
-        name=user_data.full_name,
-        email=user_data.email,
-        phone=user_data.phone,
-        password_hash=password_hash,
-        role=user_data.role,
-        district=user_data.district,
-        language_pref=user_data.preferred_language,
-    )
-    
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    new_user = create_user(db, user_data)
     
     # Generate access token
     access_token = create_access_token(data={"sub": new_user.email})
     
     return TokenResponse(
         access_token=access_token,
-        user=UserResponse.model_validate(new_user)
+        user=user_response(new_user)
     )
 
 
@@ -165,7 +178,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     - Token must be included in Authorization header as "Bearer <token>"
     """
     user = authenticate_user(db, form_data.username, form_data.password)
-    if not user:
+    if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -176,7 +189,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     
     return TokenResponse(
         access_token=access_token,
-        user=UserResponse.model_validate(user)
+        user=user_response(user)
     )
 
 
@@ -193,7 +206,7 @@ def get_current_user_profile(
     from app.core.dependencies import get_current_user
     
     user = get_current_user(token, db)
-    return UserResponse.model_validate(user)
+    return user_response(user)
 
 
 @router.post("/logout", summary="Logout (client-side token removal)")

@@ -278,6 +278,9 @@ class AdminCommandStats(BaseModel):
 
 class FarmerRegisterRequest(BaseModel):
     name: str
+    email: str
+    password: str
+    password_confirmation: Optional[str] = None
     phone: str
     state: Optional[str] = None
     district: Optional[str] = None
