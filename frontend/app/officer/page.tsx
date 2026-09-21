@@ -7,6 +7,7 @@ import {
   type OfficerQueueItem,
 } from "@/lib/api";
 import OfficerMap from "@/components/OfficerMap";
+import ChatPanel from "@/components/ChatPanel";
 
 export default function OfficerPage() {
   const [stats, setStats] = useState<OfficerDashboardStats | null>(null);
@@ -19,6 +20,8 @@ export default function OfficerPage() {
   const [notes, setNotes] = useState("");
   const [submittingVal, setSubmittingVal] = useState(false);
   const [userRole, setUserRole] = useState<"officer" | "admin" | null>(null);
+  const [showChat, setShowChat] = useState(false);
+  const [chatScanId, setChatScanId] = useState<string | undefined>();
 
   function loadData() {
     setLoading(true);
@@ -117,8 +120,20 @@ export default function OfficerPage() {
           >
             🔄 Refresh
           </button>
+          <button
+            onClick={() => setShowChat((open) => !open)}
+            className="px-4 py-2 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-300 rounded-xl text-xs font-bold transition-all"
+          >
+            💬 Chat Inbox
+          </button>
         </div>
       </div>
+
+      {showChat && (
+        <div className="mb-8">
+          <ChatPanel userId="officer-1" role="officer" initialScanId={chatScanId} onClose={() => setShowChat(false)} />
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-500/20 border border-red-500/30 rounded-xl px-4 py-3 text-red-300 text-xs mb-6">
@@ -221,6 +236,12 @@ export default function OfficerPage() {
                       className="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs transition-all shadow"
                     >
                       Validate
+                    </button>
+                    <button
+                      onClick={() => { setChatScanId(item.ai_result_id); setShowChat(true); }}
+                      className="ml-1 px-3 py-1 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 font-bold rounded-lg text-xs transition-all"
+                    >
+                      Chat
                     </button>
                   </td>
                 </tr>

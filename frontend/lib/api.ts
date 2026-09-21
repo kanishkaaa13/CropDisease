@@ -36,6 +36,7 @@ export interface TopPrediction {
 
 export interface ScanResponse {
   label: string;
+  scan_id?: string;
   disease_key?: string;
   localized_label?: string;
   confidence: number;
@@ -162,6 +163,7 @@ export interface OfficerQueueItem {
   confidence: number;
   severity_pct: number;
   image_urls: string[];
+  heat_map_url?: string | null;
   crop_name: string;
   crop_id: string | null;
   farm_name: string;
@@ -227,6 +229,40 @@ export interface ValidationSubmission {
   verdict: "confirmed" | "corrected" | "referred";
   corrected_label?: string;
   notes?: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  sender_role: "farmer" | "officer" | string;
+  body: string;
+  attachment_url?: string | null;
+  lang: string;
+  created_at: string;
+  read_at?: string | null;
+}
+
+export interface ChatConversation {
+  id: string;
+  farm_id: string;
+  farmer_id: string;
+  officer_id: string;
+  scan_id?: string | null;
+  status: "open" | "closed" | string;
+  created_at: string;
+  unread_count: number;
+  last_message?: ChatMessage | null;
+  scan_label?: string | null;
+  scan_image_url?: string | null;
+  heat_map_url?: string | null;
+}
+
+export interface ChatPage {
+  items: ChatMessage[];
+  total: number;
+  offset: number;
+  limit: number;
 }
 
 // ─── Endpoints ────────────────────────────────────────────────────────────────
@@ -324,5 +360,43 @@ export const api = {
 
   createCrop: (data: any) =>
     apiFetch<any>("/api/farmer/crops", { method: "POST", body: JSON.stringify(data) }),
+
+  listConversations: (userId: string) =>
+    apiFetch<ChatConversation[]>(`/api/chat/conversations?user_id=${encodeURIComponent(userId)}`),
+
+  createConversation: (userId: string, data: { farm_id: string; officer_id: string; scan_id?: string }) =>
+    apiFetch<ChatConversation>(`/api/chat/conversations?user_id=${encodeURIComponent(userId)}`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getMessages: (userId: string, conversationId: string, offset = 0, limit = 50) =>
+    apiFetch<ChatPage>(`/api/chat/conversations/${encodeURIComponent(conversationId)}/messages?user_id=${encodeURIComponent(userId)}&offset=${offset}&limit=${limit}`),
+
+  sendChatMessage: (userId: string, conversationId: string, data: { body: string; attachment_url?: string; lang?: string }) =>
+    apiFetch<ChatMessage>(`/api/chat/conversations/${encodeURIComponent(conversationId)}/messages?user_id=${encodeURIComponent(userId)}`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  markChatRead: (userId: string, conversationId: string) =>
+    apiFetch<{ marked_read: number }>(`/api/chat/conversations/${encodeURIComponent(conversationId)}/read?user_id=${encodeURIComponent(userId)}`, { method: "POST" }),
+
+  uploadChatAttachment: (userId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return fetch(`${BASE_URL}/api/chat/attachments?user_id=${encodeURIComponent(userId)}`, { method: "POST", body: formData }).then(async (response) => {
+      if (!response.ok) throw new Error(await response.text());
+      return response.json() as Promise<{ attachment_url: string }>;
+    });
+  },
+
+  chatWebSocketUrl: (conversationId: string, userId: string) => {
+    const url = new URL(BASE_URL);
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    url.pathname = `/ws/chat/${encodeURIComponent(conversationId)}`;
+    url.searchParams.set("user_id", userId);
+    return url.toString();
+  },
 };
 

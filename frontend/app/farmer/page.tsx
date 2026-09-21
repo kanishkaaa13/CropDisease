@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { api, type ScanResponse, type RiskScoreResponse, type AdvisoryResponse } from "@/lib/api";
 import { detectBlur } from "@/lib/blurDetection";
 import FarmCard from "@/components/farmer/FarmCard";
+import { useI18n } from "@/lib/i18n";
+import ChatPanel from "@/components/ChatPanel";
 
 type Screen = "home" | "scan" | "result" | "alerts";
 
@@ -35,9 +37,10 @@ const LANGUAGES = [
 ];
 
 export default function FarmerPage() {
+  const { locale } = useI18n();
   const [screen, setScreen] = useState<Screen>("home");
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
-  const [selectedLang, setSelectedLang] = useState("en");
+  const [selectedLang, setSelectedLang] = useState<string>(locale);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<ScanResponse | null>(null);
@@ -45,6 +48,7 @@ export default function FarmerPage() {
   const [advisory, setAdvisory] = useState<AdvisoryResponse | null>(null);
   const [showGradCAM, setShowGradCAM] = useState(true);
   const [showWhy, setShowWhy] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -153,14 +157,14 @@ export default function FarmerPage() {
 
       // 1. Scan image with AI classifier + Grad-CAM + HSV severity
       setLoadingStep("Analyzing leaf with AI...");
-      const scanRes = await api.scanImage(fd);
+      const scanRes = await api.scanImage(fd, selectedLang);
       setScanResult(scanRes);
 
       // 2. Get risk score
       if (selectedFarm) {
         setLoadingStep("Calculating risk score...");
         try {
-          const riskRes = await api.getRiskScore(selectedFarm.id);
+          const riskRes = await api.getRiskScore(selectedFarm.id, selectedLang);
           setRiskResult(riskRes);
         } catch (riskErr) {
           console.warn("Risk score failed, continuing:", riskErr);
@@ -500,6 +504,24 @@ export default function FarmerPage() {
           <div className="flex items-start justify-between mb-4">
             <div>
               <h2 className="text-xl font-bold text-white">
+
+          <div className="mb-4">
+            {!showChat ? (
+              <button onClick={() => setShowChat(true)} className="w-full py-3 rounded-xl border border-sky-500/30 bg-sky-500/10 text-sky-300 font-bold text-sm hover:bg-sky-500/20">
+                💬 Ask an officer about this diagnosis
+              </button>
+            ) : (
+              <ChatPanel
+                userId={farmerId}
+                role="farmer"
+                farmId={selectedFarm?.id}
+                officerId="officer-1"
+                scanId={scanResult.scan_id}
+                diagnosis={scanResult.localized_label || scanResult.label}
+                onClose={() => setShowChat(false)}
+              />
+            )}
+          </div>
                 {scanResult.label.replace("___", " - ").replace("_", " ")}
               </h2>
               {scanResult.low_confidence && (

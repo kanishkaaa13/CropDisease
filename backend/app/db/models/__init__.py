@@ -15,6 +15,7 @@ from app.db.models.expert_validation import ExpertValidation, ValidationVerdict
 from app.db.models.follow_up import FollowUp, FollowUpStatus
 from app.db.models.pest_trap import PestTrapReading
 from app.db.models.historical_outbreak import HistoricalOutbreak
+from app.db.models.chat import Conversation, ConversationStatus, Message
 
 __all__ = [
     "Base",
@@ -37,4 +38,7 @@ __all__ = [
     "FollowUpStatus",
     "PestTrapReading",
     "HistoricalOutbreak",
+    "Conversation",
+    "ConversationStatus",
+    "Message",
 ]

@@ -10,6 +10,52 @@ class HealthResponse(BaseModel):
     db_connected: bool
 
 
+class ChatConversationCreate(BaseModel):
+    farm_id: str
+    officer_id: str
+    scan_id: Optional[str] = None
+
+
+class ChatMessageCreate(BaseModel):
+    body: str = ""
+    attachment_url: Optional[str] = None
+    lang: Optional[str] = "en"
+
+
+class ChatMessageResponse(BaseModel):
+    id: str
+    conversation_id: str
+    sender_id: str
+    sender_role: str
+    body: str
+    attachment_url: Optional[str] = None
+    lang: str
+    created_at: datetime
+    read_at: Optional[datetime] = None
+
+
+class ChatConversationResponse(BaseModel):
+    id: str
+    farm_id: str
+    farmer_id: str
+    officer_id: str
+    scan_id: Optional[str] = None
+    status: str
+    created_at: datetime
+    unread_count: int = 0
+    last_message: Optional[ChatMessageResponse] = None
+    scan_label: Optional[str] = None
+    scan_image_url: Optional[str] = None
+    heat_map_url: Optional[str] = None
+
+
+class ChatPageResponse(BaseModel):
+    items: List[ChatMessageResponse]
+    total: int
+    offset: int
+    limit: int
+
+
 class TopPrediction(BaseModel):
     label: str
     confidence: float
@@ -19,6 +65,7 @@ class TopPrediction(BaseModel):
 
 class ScanResponse(BaseModel):
     label: str
+    scan_id: Optional[str] = None
     disease_key: Optional[str] = None
     localized_label: Optional[str] = None
     confidence: float

@@ -217,6 +217,7 @@ async def scan_crop_disease(
 
         return ScanResponse(
             **scan_result,
+            scan_id=getattr(locals().get("ai_res", None), "id", None),
             observation_id=observation_id,
             image_url=stored_image_url,
         )
