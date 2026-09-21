@@ -2,13 +2,14 @@
 FastAPI Router for RAG-based IPM Agronomic Advisory Endpoints.
 Endpoint: POST /api/advisory
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Header
 from sqlalchemy.orm import Session
 from typing import Optional
 
 from app.db.connection import get_db
 from app.models.schemas import AdvisoryRequest, RAGAdvisoryResponse
 from app.services.rag_advisory import generate_rag_advisory
+from app.i18n.catalog import disease_key, get_locale_from_request
 
 router = APIRouter()
 
@@ -27,7 +28,9 @@ router = APIRouter()
 )
 def get_agronomic_advisory(
     payload: AdvisoryRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    lang: Optional[str] = Query(None, description="Response language: en, hi, or mr"),
+    accept_language: Optional[str] = Header(None, alias="Accept-Language"),
 ):
     try:
         crop_name = payload.crop_name or "Tomato"
@@ -80,6 +83,13 @@ def get_agronomic_advisory(
 
         rag_output["crop_id"] = payload.crop_id
         rag_output["ai_result_id"] = payload.ai_result_id
+        locale = get_locale_from_request(lang, accept_language)
+        if not lang and not accept_language and payload.language_pref:
+            locale = get_locale_from_request(payload.language_pref)
+        rag_output["advisory_key"] = "ipm_advisory"
+        rag_output["disease_key"] = disease_key(disease_label)
+        rag_output["crop_key"] = disease_key(crop_name)
+        rag_output["language"] = locale
 
         return RAGAdvisoryResponse(**rag_output)
 

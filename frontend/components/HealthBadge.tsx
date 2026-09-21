@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { api, type HealthResponse } from "@/lib/api";
+import { useTranslations } from "@/lib/i18n";
 
 export default function HealthBadge() {
+  const t = useTranslations();
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [error, setError] = useState(false);
 
@@ -17,7 +19,7 @@ export default function HealthBadge() {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs bg-red-500/20 text-red-300 border border-red-500/30 px-3 py-1 rounded-full">
         <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-        Backend unreachable
+        {t("common.backend_unreachable")}
       </span>
     );
   }
@@ -25,7 +27,7 @@ export default function HealthBadge() {
   if (!health) {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs bg-slate-700/40 text-slate-400 px-3 py-1 rounded-full animate-pulse">
-        Checking…
+        {t("common.checking")}
       </span>
     );
   }
@@ -38,7 +40,7 @@ export default function HealthBadge() {
       }`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${health.db_connected ? "bg-emerald-400" : "bg-yellow-400"} animate-pulse`} />
-      API {health.status} · DB {health.db_connected ? "✓" : "✗"} · v{health.version}
+      {t("common.api")} {health.status} · {t("common.database")} {health.db_connected ? "✓" : "✗"} · v{health.version}
     </span>
   );
 }

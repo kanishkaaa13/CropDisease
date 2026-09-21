@@ -30,22 +30,30 @@ export interface HealthResponse {
 export interface TopPrediction {
   label: string;
   confidence: number;
+  disease_key?: string;
+  localized_label?: string;
 }
 
 export interface ScanResponse {
   label: string;
+  disease_key?: string;
+  localized_label?: string;
   confidence: number;
   top3: TopPrediction[];
   severity_estimate: number;
   severity_pct: number;
   gradcam_image_base64: string;
   low_confidence: boolean;
+  status_key?: string;
+  severity_key?: string;
+  language?: string;
 }
 
 export interface RiskWhyFactor {
   factor: string;
   details: string;
   impact_score: number;
+  factor_key?: string;
 }
 
 export interface RiskForecastDay {
@@ -53,6 +61,7 @@ export interface RiskForecastDay {
   date: string;
   predicted_risk_score: number;
   risk_level: string;
+  risk_level_key?: string;
   temp_max: number;
   rain_mm: number;
 }
@@ -61,6 +70,8 @@ export interface RiskScoreResponse {
   crop_id: string;
   overall_score: number;
   risk_level: "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
+  risk_level_key?: string;
+  language?: string;
   disease_risk: number;
   pest_risk: number;
   weather_risk: number;
@@ -94,6 +105,10 @@ export interface RAGAdvisoryResponse {
   };
   match_confidence: string;
   kb_entry_found: boolean;
+  advisory_key?: string;
+  disease_key?: string;
+  crop_key?: string;
+  language?: string;
 }
 
 export interface OfficerDashboardStats {
@@ -219,14 +234,14 @@ export interface ValidationSubmission {
 export const api = {
   health: () => apiFetch<HealthResponse>("/api/health"),
 
-  scanImage: (formData: FormData) =>
-    fetch(`${BASE_URL}/api/scan`, { method: "POST", body: formData }).then((r) => {
+  scanImage: (formData: FormData, language: string = "en") =>
+    fetch(`${BASE_URL}/api/scan?lang=${encodeURIComponent(language)}`, { method: "POST", body: formData }).then((r) => {
       if (!r.ok) throw new Error(`Scan failed: ${r.statusText}`);
       return r.json() as Promise<ScanResponse>;
     }),
 
-  getRiskScore: (cropId: string) =>
-    apiFetch<RiskScoreResponse>("/api/risk-score", {
+  getRiskScore: (cropId: string, language: string = "en") =>
+    apiFetch<RiskScoreResponse>(`/api/risk-score?lang=${encodeURIComponent(language)}`, {
       method: "POST",
       body: JSON.stringify({ crop_id: cropId }),
     }),
