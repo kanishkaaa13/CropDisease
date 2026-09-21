@@ -32,7 +32,7 @@ async def predict_crop_risk(payload: CropRiskPredictionRequest):
     try:
         latitude = payload.latitude if payload.latitude is not None else 19.9975
         longitude = payload.longitude if payload.longitude is not None else 73.7898
-        snapshot = await fetch_weather(latitude, longitude)
+        snapshot = await fetch_weather(latitude, longitude, forecast_days=7)
         features = engineer_weather_features(snapshot)
         live_weather_risk = compute_weather_risk(features)
         # The fusion engine combines disease, weather, local-case, and pest signals.
@@ -51,13 +51,13 @@ async def predict_crop_risk(payload: CropRiskPredictionRequest):
             days_since_rain=features["days_since_rain"],
             forecast_days=[
                 {"day": f"Day {index + 1}", "date": item["date"], "temp_max": item["temp_max"], "humidity_pct": item["humidity_mean"], "rain_mm": item["precipitation_sum"]}
-                for index, item in enumerate((snapshot.forecast + snapshot.forecast[-1:] * 2)[:7])
+                for index, item in enumerate(snapshot.forecast[:7])
             ],
         )
         factors = [
             {"name": "Weather pressure", "value": round(live_weather_risk, 1), "detail": f"{payload.temperature:.1f}°C, {payload.humidity:.0f}% humidity, {payload.rainfall:.1f} mm rainfall."},
             {"name": "Soil condition", "value": round(max(0.0, 100.0 - abs(payload.soil_ph - 6.5) * 18), 1), "detail": f"{payload.soil_type.title()} soil at pH {payload.soil_ph:.1f}."},
-            {"name": "Crop stage", "value": round(result["overall_score"], 1), "detail": f"{crop_stage_label := stage.title()} stage vulnerability included in the fusion score."},
+            {"name": "Crop stage", "value": round(result["overall_score"], 1), "detail": f"{stage.title()} stage vulnerability included in the fusion score."},
         ]
         return CropRiskPredictionResponse(
             risk_level=result["risk_level"],

@@ -46,14 +46,14 @@ class WeatherFeatures(TypedDict):
 _weather_cache: Dict[tuple, tuple] = {}
 
 
-def _get_cache_key(lat: float, lng: float) -> tuple:
+def _get_cache_key(lat: float, lng: float, forecast_days: int = 5) -> tuple:
     """Generate cache key for location."""
-    return (round(lat, 4), round(lng, 4))
+    return (round(lat, 4), round(lng, 4), forecast_days)
 
 
-def _get_cached_weather(lat: float, lng: float) -> Optional[WeatherSnapshot]:
+def _get_cached_weather(lat: float, lng: float, forecast_days: int = 5) -> Optional[WeatherSnapshot]:
     """Get cached weather if available and not expired."""
-    key = _get_cache_key(lat, lng)
+    key = _get_cache_key(lat, lng, forecast_days)
     if key in _weather_cache:
         cached_time, snapshot = _weather_cache[key]
         if time.time() - cached_time < CACHE_DURATION_SECONDS:
@@ -65,14 +65,14 @@ def _get_cached_weather(lat: float, lng: float) -> Optional[WeatherSnapshot]:
     return None
 
 
-def _cache_weather(lat: float, lng: float, snapshot: WeatherSnapshot):
+def _cache_weather(lat: float, lng: float, snapshot: WeatherSnapshot, forecast_days: int = 5):
     """Cache weather snapshot."""
-    key = _get_cache_key(lat, lng)
+    key = _get_cache_key(lat, lng, forecast_days)
     _weather_cache[key] = (time.time(), snapshot)
     logger.debug(f"Cached weather for {lat}, {lng}")
 
 
-async def fetch_weather(lat: float, lng: float) -> WeatherSnapshot:
+async def fetch_weather(lat: float, lng: float, forecast_days: int = 5) -> WeatherSnapshot:
     """
     Fetch current weather and 5-day forecast from Open-Meteo API.
     Caches responses per farm for 1 hour.
@@ -85,7 +85,8 @@ async def fetch_weather(lat: float, lng: float) -> WeatherSnapshot:
         WeatherSnapshot with current conditions and forecast
     """
     # Check cache first
-    cached = _get_cached_weather(lat, lng)
+    forecast_days = max(1, min(forecast_days, 16))
+    cached = _get_cached_weather(lat, lng, forecast_days)
     if cached:
         return cached
     
@@ -95,7 +96,7 @@ async def fetch_weather(lat: float, lng: float) -> WeatherSnapshot:
         "longitude": lng,
         "current": "temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m",
         "daily": "precipitation_sum,temperature_2m_max,temperature_2m_min,relative_humidity_2m_mean",
-        "forecast_days": 5,
+        "forecast_days": forecast_days,
         "timezone": "auto",
     }
     
@@ -130,7 +131,7 @@ async def fetch_weather(lat: float, lng: float) -> WeatherSnapshot:
         )
         
         # Cache the result
-        _cache_weather(lat, lng, snapshot)
+        _cache_weather(lat, lng, snapshot, forecast_days)
         
         logger.info(f"Fetched weather for {lat}, {lng}: {snapshot.temperature}°C, {snapshot.humidity}% humidity")
         return snapshot
