@@ -3,9 +3,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { api, type AdminSummary, type DistrictAnalytics, type Outbreak, type RiskTrendData } from "@/lib/api";
 import OfficerMap from "@/components/OfficerMap";
+import AdminHotspotMap from "@/components/AdminHotspotMap";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import GovResourceLinks from "@/components/GovResourceLinks";
 import { useTranslations } from "@/lib/i18n";
+import SeverityBadge from "@/components/SeverityBadge";
 
 export default function AdminPage() {
   const t = useTranslations();
@@ -14,31 +16,50 @@ export default function AdminPage() {
   const [outbreaks, setOutbreaks] = useState<Outbreak[]>([]);
   const [riskTrend, setRiskTrend] = useState<RiskTrendData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Table state
   const [sortBy, setSortBy] = useState("risk_score");
   const [sortOrder, setSortOrder] = useState("desc");
   const [filterDistrict, setFilterDistrict] = useState("");
+  
+  // Map filter state
+  const [hotspotFilter, setHotspotFilter] = useState<"all" | "fungal" | "pest">("all");
 
-  const loadData = useCallback(() => {
-    setLoading(true);
+  const loadData = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
 
-    Promise.all([
-      api.adminSummary(),
-      api.adminDistrictAnalytics("Maharashtra", sortBy, sortOrder),
-      api.adminOutbreaks(30.0),
-      api.adminRiskTrend("Maharashtra", 30),
-    ])
-      .then(([s, d, o, r]) => {
-        setSummary(s);
-        setDistrictData(d);
-        setOutbreaks(o);
-        setRiskTrend(r);
-      })
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const [s, d, o, r] = await Promise.all([
+        api.adminSummary(),
+        api.adminDistrictAnalytics("Maharashtra", sortBy, sortOrder),
+        api.adminOutbreaks(30.0),
+        api.adminRiskTrend("Maharashtra", 30),
+      ]);
+      setSummary(s);
+      setDistrictData(d);
+      setOutbreaks(o);
+      setRiskTrend(r);
+    } catch (e: any) {
+      if (e.name === 'AbortError') {
+        setError('Request timed out. Please try again.');
+      } else {
+        setError(e.message || 'Failed to load data');
+      }
+    } finally {
+      clearTimeout(timeout);
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [sortBy, sortOrder]);
 
   useEffect(() => {
@@ -59,20 +80,21 @@ export default function AdminPage() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
             {t("admin.title")}
           </h1>
-          <p className="text-slate-400 text-sm mt-1">{t("admin.subtitle")}</p>
+          <p className="text-slate-400 text-sm mt-2">{t("admin.subtitle")}</p>
         </div>
         <button
-          onClick={loadData}
-          className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 rounded-lg text-xs font-semibold transition-all"
+          onClick={() => loadData(true)}
+          disabled={refreshing}
+          className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/20"
         >
-          {t("admin.refresh")}
+          {refreshing ? 'Refreshing...' : t("admin.refresh")}
         </button>
       </div>
 
@@ -87,43 +109,104 @@ export default function AdminPage() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="glass p-4 animate-pulse h-24 bg-white/5" />
+            <div key={i} className="glass p-4 animate-pulse h-28 bg-white/5 rounded-lg border border-white/10" />
           ))}
         </div>
-      ) : summary && (
+      ) : (
         <>
           {/* Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             {[
-              { label: "Monitored Farms", value: summary.total_monitored_farms, color: "text-sky-400" },
-              { label: "Active Alerts", value: summary.active_alerts, color: "text-red-400" },
-              { label: "High-Risk Villages", value: summary.high_risk_villages, color: "text-orange-400" },
-              { label: "Disease Outbreaks", value: summary.disease_outbreaks_detected, color: "text-amber-400" },
-              { label: "Pending Validations", value: summary.pending_expert_validations, color: "text-purple-400" },
-            ].map(({ label, value, color }) => (
-              <div key={label} className="glass p-4 rounded-lg border border-white/10">
+              { 
+                label: "Monitored Farms", 
+                value: summary?.total_monitored_farms ?? 0, 
+                icon: "🏡",
+                color: "text-sky-400",
+                bgColor: "bg-sky-500/10",
+                borderColor: "border-sky-500/20"
+              },
+              { 
+                label: "Active Alerts", 
+                value: summary?.active_alerts ?? 0, 
+                icon: "🚨",
+                color: "text-red-400",
+                bgColor: "bg-red-500/10",
+                borderColor: "border-red-500/20"
+              },
+              { 
+                label: "High-Risk Villages", 
+                value: summary?.high_risk_villages ?? 0, 
+                icon: "⚠️",
+                color: "text-orange-400",
+                bgColor: "bg-orange-500/10",
+                borderColor: "border-orange-500/20"
+              },
+              { 
+                label: "Disease Outbreaks", 
+                value: summary?.disease_outbreaks_detected ?? 0, 
+                icon: "🦠",
+                color: "text-amber-400",
+                bgColor: "bg-amber-500/10",
+                borderColor: "border-amber-500/20"
+              },
+              { 
+                label: "Pending Validations", 
+                value: summary?.pending_expert_validations ?? 0, 
+                icon: "📋",
+                color: "text-purple-400",
+                bgColor: "bg-purple-500/10",
+                borderColor: "border-purple-500/20"
+              },
+            ].map(({ label, value, icon, color, bgColor, borderColor }) => (
+              <div 
+                key={label} 
+                className={`glass p-5 rounded-xl border ${borderColor} ${refreshing ? 'opacity-50' : ''} transition-all duration-200 hover:border-white/20`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-3xl">{icon}</span>
+                  <SeverityBadge severity={value > 10 ? "HIGH" : value > 5 ? "MODERATE" : "LOW"} />
+                </div>
                 <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">{label}</p>
-                <p className={`text-2xl font-bold ${color} tabular-nums`}>{value}</p>
+                <p className={`text-3xl font-bold ${color} tabular-nums mt-2`}>
+                  {value}
+                </p>
               </div>
             ))}
           </div>
 
           {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Maharashtra Map */}
-            <div className="glass p-4 rounded-lg border border-white/10">
-              <h2 className="text-sm font-bold text-white mb-4">🗺️ Risk Hotspots Map</h2>
-              <div className="h-80">
-                <OfficerMap officerLat={19.0} officerLng={75.0} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Maharashtra Risk Hotspots Map */}
+            <div className="glass p-5 rounded-xl border border-white/10">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-base font-semibold text-white">🗺️ Risk Hotspots Map</h2>
+                <div className="flex gap-1">
+                  {["all", "fungal", "pest"].map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setHotspotFilter(filter as any)}
+                      className={`px-2 py-1 text-[10px] font-semibold rounded transition-colors ${
+                        hotspotFilter === filter
+                          ? "bg-emerald-500 text-white"
+                          : "bg-white/5 text-slate-400 hover:bg-white/10"
+                      }`}
+                    >
+                      {filter === "all" ? "All" : filter === "fungal" ? "Fungal" : "Pest"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="h-80 rounded-lg overflow-hidden">
+                <AdminHotspotMap filter={hotspotFilter} />
               </div>
             </div>
 
             {/* Risk Trend Chart */}
-            <div className="glass p-4 rounded-lg border border-white/10">
-              <h2 className="text-sm font-bold text-white mb-4">📈 Statewide Risk Trend (30 Days)</h2>
-              <div className="h-80">
+            <div className="glass p-5 rounded-xl border border-white/10">
+              <h2 className="text-base font-semibold text-white mb-5">📈 Statewide Risk Trend (30 Days)</h2>
+              <div className="h-80 rounded-lg overflow-hidden">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={riskTrend}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
@@ -158,21 +241,21 @@ export default function AdminPage() {
           </div>
 
           {/* District Analytics Table */}
-          <div className="glass p-4 rounded-lg border border-white/10 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-white">📊 District Analytics</h2>
+          <div className="glass p-5 rounded-xl border border-white/10 mb-8">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-semibold text-white">📊 District Analytics</h2>
               <input
                 type="text"
                 placeholder="Filter district..."
                 value={filterDistrict}
                 onChange={(e) => setFilterDistrict(e.target.value)}
-                className="bg-slate-900 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                className="bg-slate-900/50 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all duration-200"
               />
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
+            <div className="overflow-x-auto rounded-lg">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/10">
+                  <tr className="border-b border-white/10 bg-white/5">
                     {[
                       { key: "district", label: "District" },
                       { key: "dominant_crop", label: "Dominant Crop" },
@@ -184,7 +267,7 @@ export default function AdminPage() {
                       <th
                         key={key}
                         onClick={() => handleSort(key)}
-                        className="text-left py-2 px-3 text-slate-400 font-semibold cursor-pointer hover:text-white transition-colors"
+                        className="text-left py-3 px-4 text-slate-400 font-semibold cursor-pointer hover:text-white hover:bg-white/5 transition-all duration-200"
                       >
                         {label} {sortBy === key && (sortOrder === "asc" ? "↑" : "↓")}
                       </th>
@@ -192,13 +275,22 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDistricts.map((row) => (
-                    <tr key={row.district} className="border-b border-white/5 hover:bg-white/5">
-                      <td className="py-2 px-3 text-white font-medium">{row.district}</td>
-                      <td className="py-2 px-3 text-slate-300">{row.dominant_crop}</td>
-                      <td className="py-2 px-3 text-slate-300">{row.dominant_threat}</td>
-                      <td className="py-2 px-3">
-                        <span className={`font-bold ${
+                  {filteredDistricts.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-slate-500 text-sm">
+                        <div className="flex flex-col items-center gap-3">
+                          <span className="text-4xl">📊</span>
+                          <span className="text-slate-400">No district data available</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredDistricts.map((row) => (
+                    <tr key={row.district} className="border-b border-white/5 hover:bg-white/5 transition-colors duration-200">
+                      <td className="py-3 px-4 text-white font-medium">{row.district}</td>
+                      <td className="py-3 px-4 text-slate-300">{row.dominant_crop || 'N/A'}</td>
+                      <td className="py-3 px-4 text-slate-300">{row.dominant_threat || 'None'}</td>
+                      <td className="py-3 px-4">
+                        <span className={`font-semibold ${
                           row.risk_score >= 70 ? "text-red-400" :
                           row.risk_score >= 50 ? "text-orange-400" :
                           row.risk_score >= 30 ? "text-yellow-400" :
@@ -207,8 +299,8 @@ export default function AdminPage() {
                           {row.risk_score.toFixed(1)}
                         </span>
                       </td>
-                      <td className="py-2 px-3 text-slate-300 tabular-nums">{row.case_count}</td>
-                      <td className="py-2 px-3 text-slate-300 tabular-nums">{row.farm_count}</td>
+                      <td className="py-3 px-4 text-slate-300 tabular-nums">{row.case_count}</td>
+                      <td className="py-3 px-4 text-slate-300 tabular-nums">{row.farm_count}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -217,13 +309,16 @@ export default function AdminPage() {
           </div>
 
           {/* Emerging Outbreaks Panel */}
-          <div className="glass p-4 rounded-lg border border-red-500/30">
-            <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+          <div className="glass p-5 rounded-xl border border-red-500/30">
+            <h2 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
               🚨 Emerging Outbreaks
-              <span className="text-[10px] font-normal text-slate-400">Week-over-week growth &gt;30%</span>
+              <span className="text-xs font-normal text-slate-400">Week-over-week growth &gt;30%</span>
             </h2>
             {outbreaks.length === 0 ? (
-              <div className="text-center py-8 text-slate-500 text-sm">No emerging outbreaks detected</div>
+              <div className="text-center py-12 text-slate-500 text-sm flex flex-col items-center gap-3">
+                <span className="text-4xl">✅</span>
+                <span>No emerging outbreaks detected</span>
+              </div>
             ) : (
               <div className="space-y-2">
                 {outbreaks.map((o) => (

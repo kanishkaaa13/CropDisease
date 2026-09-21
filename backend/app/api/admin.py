@@ -11,6 +11,7 @@ from sqlalchemy import func
 from app.db.connection import get_db
 from app.models.schemas import AdminCommandStats, AdminAlertRequest
 from app.services.outbreak_detector import detect_emerging_outbreaks
+from app.data.maharashtra_locations import MAHARASHTRA_LOCATIONS
 
 logger = logging.getLogger(__name__)
 
@@ -157,11 +158,12 @@ def get_admin_summary(db: Session = Depends(get_db)):
         )
 
         return {
-            "total_monitored_farms": total_farms or 15,
-            "active_alerts": active_alerts or 8,
-            "high_risk_villages": high_risk_villages or 3,
-            "disease_outbreaks_detected": disease_outbreaks or 5,
-            "pending_expert_validations": pending_validations or 12,
+            "total_monitored_farms": total_farms or 0,
+            "active_alerts": active_alerts or 0,
+            "high_risk_villages": high_risk_villages or 0,
+            "disease_outbreaks_detected": disease_outbreaks or 0,
+            "pending_expert_validations": pending_validations or 0,
+            "source": "real"
         }
 
     except Exception as exc:
@@ -357,4 +359,175 @@ def get_risk_trend(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching risk trend: {str(exc)}"
+        )
+
+
+@router.get("/hotspots", summary="Risk hotspot data for map visualization")
+def get_hotspots(db: Session = Depends(get_db)):
+    """
+    Returns hotspot data for each Maharashtra location including:
+    - Location name, lat/lng, district, climate zone
+    - Current risk level (LOW/MODERATE/HIGH/CRITICAL)
+    - Dominant disease or pest
+    - Scan count
+    - 7-day trend data (simplified for demo)
+    """
+    try:
+        from app.db.models import Farm, Crop, Observation, AIResult, RiskScore
+        from sqlalchemy import and_
+
+        hotspots = []
+
+        for location in MAHARASHTRA_LOCATIONS:
+            # Find farms near this location (within 0.5 degrees for demo)
+            lat_range = (location["lat"] - 0.5, location["lat"] + 0.5)
+            lng_range = (location["lng"] - 0.5, location["lng"] + 0.5)
+
+            nearby_farms = (
+                db.query(Farm.id)
+                .filter(
+                    and_(
+                        Farm.gps_lat >= lat_range[0],
+                        Farm.gps_lat <= lat_range[1],
+                        Farm.gps_lng >= lng_range[0],
+                        Farm.gps_lng <= lng_range[1]
+                    )
+                )
+                .all()
+            )
+
+            if not nearby_farms:
+                # No farms near this location, use default low risk
+                hotspots.append({
+                    "name": location["name"],
+                    "lat": location["lat"],
+                    "lng": location["lng"],
+                    "district": location["district"],
+                    "climate_zone": location["climate_zone"],
+                    "risk_level": "LOW",
+                    "dominant_disease_or_pest": "No data",
+                    "scan_count": 0,
+                    "trend_data": [0, 0, 0, 0, 0, 0, 0],
+                    "source": "none"
+                })
+                continue
+
+            farm_ids = [f[0] for f in nearby_farms]
+
+            # Get observations for these farms in the last 7 days
+            seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+            observations = (
+                db.query(Observation)
+                .join(Crop, Crop.id == Observation.crop_id)
+                .filter(Crop.farm_id.in_(farm_ids))
+                .filter(Observation.timestamp >= seven_days_ago)
+                .all()
+            )
+
+            scan_count = len(observations)
+
+            if scan_count == 0:
+                hotspots.append({
+                    "name": location["name"],
+                    "lat": location["lat"],
+                    "lng": location["lng"],
+                    "district": location["district"],
+                    "climate_zone": location["climate_zone"],
+                    "risk_level": "LOW",
+                    "dominant_disease_or_pest": "No recent scans",
+                    "scan_count": 0,
+                    "trend_data": [0, 0, 0, 0, 0, 0, 0],
+                    "source": "none"
+                })
+                continue
+
+            # Get AI results for these observations
+            obs_ids = [obs.id for obs in observations]
+            ai_results = (
+                db.query(AIResult)
+                .filter(AIResult.observation_id.in_(obs_ids))
+                .all()
+            )
+
+            # Calculate average risk score
+            risk_scores = (
+                db.query(RiskScore.overall_score)
+                .join(Crop, Crop.id == RiskScore.crop_id)
+                .filter(Crop.farm_id.in_(farm_ids))
+                .filter(RiskScore.created_at >= seven_days_ago)
+                .all()
+            )
+
+            avg_risk = sum([r[0] for r in risk_scores]) / len(risk_scores) if risk_scores else 0.3
+
+            # Determine risk level
+            if avg_risk >= 0.7:
+                risk_level = "CRITICAL"
+            elif avg_risk >= 0.5:
+                risk_level = "HIGH"
+            elif avg_risk >= 0.3:
+                risk_level = "MODERATE"
+            else:
+                risk_level = "LOW"
+
+            # Find dominant disease or pest
+            disease_counts = {}
+            pest_counts = {}
+
+            for ai_result in ai_results:
+                if ai_result.disease_label:
+                    disease_counts[ai_result.disease_label] = disease_counts.get(ai_result.disease_label, 0) + 1
+                if ai_result.pest_label:
+                    pest_counts[ai_result.pest_label] = pest_counts.get(ai_result.pest_label, 0) + 1
+
+            dominant_disease = max(disease_counts.items(), key=lambda x: x[1])[0] if disease_counts else None
+            dominant_pest = max(pest_counts.items(), key=lambda x: x[1])[0] if pest_counts else None
+
+            # Use disease skew from location data to decide which to show
+            if location["disease_skew"] == "fungal":
+                dominant = dominant_disease or dominant_pest or "Unknown"
+            elif location["disease_skew"] == "pest":
+                dominant = dominant_pest or dominant_disease or "Unknown"
+            else:
+                # Mixed - show whichever has higher count
+                disease_max = max(disease_counts.values()) if disease_counts else 0
+                pest_max = max(pest_counts.values()) if pest_counts else 0
+                dominant = dominant_disease if disease_max >= pest_max else dominant_pest or "Unknown"
+
+            # Generate simplified 7-day trend data
+            trend_data = []
+            for day_offset in range(6, -1, -1):
+                day_start = datetime.now(timezone.utc) - timedelta(days=day_offset + 1)
+                day_end = datetime.now(timezone.utc) - timedelta(days=day_offset)
+                
+                day_scans = (
+                    db.query(Observation)
+                    .join(Crop, Crop.id == Observation.crop_id)
+                    .filter(Crop.farm_id.in_(farm_ids))
+                    .filter(Observation.timestamp >= day_start)
+                    .filter(Observation.timestamp < day_end)
+                    .count()
+                )
+                trend_data.append(day_scans)
+
+            hotspots.append({
+                "name": location["name"],
+                "lat": location["lat"],
+                "lng": location["lng"],
+                "district": location["district"],
+                "climate_zone": location["climate_zone"],
+                "risk_level": risk_level,
+                "dominant_disease_or_pest": dominant,
+                "scan_count": scan_count,
+                "trend_data": trend_data,
+                "source": "real"
+            })
+
+        return hotspots
+
+    except Exception as exc:
+        logger.error(f"Error fetching hotspots: {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching hotspots: {str(exc)}"
         )

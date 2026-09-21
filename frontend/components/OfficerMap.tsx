@@ -33,10 +33,34 @@ export default function OfficerMap({ officerLat = 19.0, officerLng = 73.0, onHot
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
-    // Initialize map centered on Maharashtra
+    // Initialize map centered on Maharashtra with CARTO Dark Matter tiles
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: "https://demotiles.maplibre.org/style.json",
+      style: {
+        version: 8,
+        sources: {
+          'carto-dark': {
+            type: 'raster',
+            tiles: [
+              'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+              'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+              'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+              'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png'
+            ],
+            tileSize: 256,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          }
+        },
+        layers: [
+          {
+            id: 'carto-dark',
+            type: 'raster',
+            source: 'carto-dark',
+            minzoom: 0,
+            maxzoom: 22
+          }
+        ]
+      },
       center: [officerLng, officerLat],
       zoom: 6,
     });

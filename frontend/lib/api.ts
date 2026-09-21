@@ -184,6 +184,19 @@ export interface RiskHotspot {
   risk_level: "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
 }
 
+export interface AdminHotspot {
+  name: string;
+  lat: number;
+  lng: number;
+  district: string;
+  climate_zone: string;
+  risk_level: "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
+  dominant_disease_or_pest: string;
+  scan_count: number;
+  trend_data: number[];
+  source: "real" | "seeded" | "none";
+}
+
 export interface OfficerQueueItem {
   ai_result_id: string;
   observation_id: string;
@@ -384,6 +397,8 @@ export const api = {
 
   adminRiskTrend: (state: string = "Maharashtra", days: number = 30) =>
     apiFetch<RiskTrendData[]>(`/api/admin/risk-trend?state=${encodeURIComponent(state)}&days=${days}`),
+
+  adminHotspots: () => apiFetch<AdminHotspot[]>("/api/admin/hotspots"),
 
   // Farmer endpoints
   getFarmerFarms: (farmerId: string) =>
