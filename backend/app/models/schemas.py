@@ -23,6 +23,7 @@ class ScanResponse(BaseModel):
     severity_pct: float = Field(..., description="Estimated percentage of leaf area affected (0.0 to 100.0)")
     gradcam_image_base64: str = Field(..., description="Base64 encoded PNG data URI of Grad-CAM heatmap overlay")
     low_confidence: bool = Field(..., description="True if top prediction confidence is below 0.60 threshold")
+    status: str = Field(default="confident", description="Status of prediction: 'confident' or 'uncertain'")
     observation_id: Optional[str] = Field(None, description="Persisted observation record ID")
     image_url: Optional[str] = Field(None, description="Relative URL of the stored scan image")
 

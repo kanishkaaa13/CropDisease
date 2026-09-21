@@ -15,9 +15,10 @@ from app.ml.disease_classifier import get_disease_classifier
 from app.ml.image_quality import check_image_quality, get_farmer_friendly_message
 from app.services.dataset_manager import get_dataset_manager
 
-logger = logging.getLogger(__name__)
-
 router = APIRouter()
+
+CONFIDENCE_THRESHOLD = 0.60
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
 
 
 @router.post(
@@ -27,7 +28,7 @@ router = APIRouter()
     description=(
         "Accepts an uploaded crop leaf image file. Returns model predicted disease label, "
         "calibrated confidence score, top-3 predictions, HSV severity estimation, "
-        "Grad-CAM visual heatmap overlay (Base64 URI), low-confidence flag, and persists "
+        "Grad-CAM visual heatmap overlay (Base64 URI), low-confidence flag, status flag, and persists "
         "the observation and uploaded image."
     ),
 )
@@ -41,7 +42,7 @@ async def scan_crop_disease(
     db: Session = Depends(get_db),
 ):
     # Validate content type
-    if file.content_type and not file.content_type.startswith("image/"):
+    if file.content_type and not (file.content_type.startswith("image/") or file.content_type in ["application/octet-stream"]):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid file type '{file.content_type}'. Please upload an image file (JPEG, PNG, WEBP)."
@@ -54,6 +55,13 @@ async def scan_crop_disease(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Uploaded file is empty."
+            )
+
+        # Check maximum file size limit
+        if len(contents) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File size exceeds maximum allowed limit of 10MB (got {len(contents) / (1024*1024):.2f}MB)."
             )
 
         # Open PIL Image
@@ -75,7 +83,7 @@ async def scan_crop_disease(
             f.write(contents)
         stored_image_url = f"/uploads/scans/{saved_filename}"
 
-        # 2. Run image quality check BEFORE disease classification
+        # 2. Run image quality check BEFORE disease classification (rejects non-leaf images)
         quality_result = check_image_quality(pil_image)
         
         if not quality_result["passed"]:
@@ -94,6 +102,15 @@ async def scan_crop_disease(
         # 3. Run DiseaseClassifier diagnostic pipeline
         classifier = get_disease_classifier()
         scan_result = classifier.scan_crop_image(pil_image)
+
+        # 3b. Confidence Threshold & Status handling
+        conf = float(scan_result.get("confidence", 0.0))
+        if conf < CONFIDENCE_THRESHOLD:
+            scan_result["status"] = "uncertain"
+            scan_result["low_confidence"] = True
+        else:
+            scan_result["status"] = "confident"
+            scan_result["low_confidence"] = False
 
         # Save Grad-CAM image to disk instead of storing the huge Base64
         # string inside PostgreSQL.

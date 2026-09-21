@@ -120,32 +120,24 @@ class DiseaseClassifier:
                 logger.warning(f"Failed to load classes from dataset: {exc}. Using default classes.")
 
         if not self.weights_path.exists():
-            logger.warning(
-                "Model weights not found at %s. Running DiseaseClassifier in MOCK mode.",
-                self.weights_path
+            raise FileNotFoundError(
+                f"Model weights not found at {self.weights_path}. Untrained/mock model execution is disabled. "
+                f"Please place trained model weights at {self.weights_path}."
             )
-            self.is_fallback = True
-            logger.info("=" * 60)
-            logger.info("DISEASE CLASSIFIER MODE: MOCK (No model weights found)")
-            logger.info("=" * 60)
-            return
 
         try:
             logger.info("Loading DiseaseClassifier model from %s on %s...", self.weights_path, self.device)
             checkpoint = torch.load(self.weights_path, map_location=self.device)
 
             if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
-                # Use checkpoint classes if available, otherwise use dataset/default classes
                 self.classes = checkpoint.get("classes", self.classes)
                 self.temperature = float(checkpoint.get("temperature", 1.0))
                 num_classes = len(self.classes)
 
-                # Initialize EfficientNet-B0
                 model = models.efficientnet_b0(weights=None)
                 model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
                 model.load_state_dict(checkpoint["model_state_dict"])
             else:
-                # Direct state dict
                 num_classes = len(self.classes)
                 model = models.efficientnet_b0(weights=None)
                 model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
@@ -158,17 +150,10 @@ class DiseaseClassifier:
             self.gradcam_engine = GradCAM(self.model)
             logger.info("Successfully loaded trained EfficientNet-B0 model with %d classes (T=%.2f).",
                         num_classes, self.temperature)
-            logger.info("=" * 60)
-            logger.info("DISEASE CLASSIFIER MODE: REAL (Trained model loaded)")
-            logger.info("=" * 60)
 
         except Exception as exc:
-            logger.error("Failed to load model weights from %s: %s. Reverting to MOCK mode.",
-                         self.weights_path, exc)
-            self.is_fallback = True
-            logger.info("=" * 60)
-            logger.info("DISEASE CLASSIFIER MODE: MOCK (Model load failed)")
-            logger.info("=" * 60)
+            logger.error("Failed to load model weights from %s: %s", self.weights_path, exc)
+            raise RuntimeError(f"Failed to load model weights from {self.weights_path}: {exc}")
 
     def predict(self, image: Image.Image, top_k: int = 3) -> DiseaseProbability:
         """
@@ -180,8 +165,8 @@ class DiseaseClassifier:
             - top3 (list): Top-k predictions [{"label": ..., "confidence": ...}, ...]
             - is_low_confidence (bool): True if top-1 confidence < 0.6
         """
-        if self.is_fallback or self.model is None:
-            return self._fallback_prediction(image, top_k)
+        if self.model is None:
+            raise RuntimeError("DiseaseClassifier model is not initialized. Model weights must be loaded.")
 
         # Preprocess image
         input_tensor = self.transform(image.convert("RGB")).unsqueeze(0).to(self.device)

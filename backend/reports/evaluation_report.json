@@ -1,0 +1,361 @@
+{
+  "dataset": "nirmalsankalana/crop-pest-and-disease-detection",
+  "total_test_samples": 2522,
+  "overall_accuracy": 0.0575,
+  "top3_accuracy": 0.1594,
+  "top10_most_confused_pairs": [
+    {
+      "true_class": "Cassava bacterial blight",
+      "predicted_class": "Cashew leaf miner",
+      "count": 113
+    },
+    {
+      "true_class": "Cashew red rust",
+      "predicted_class": "Cashew leaf miner",
+      "count": 76
+    },
+    {
+      "true_class": "Cassava healthy",
+      "predicted_class": "Tomato septoria leaf spot",
+      "count": 56
+    },
+    {
+      "true_class": "Tomato septoria leaf spot",
+      "predicted_class": "Cashew leaf miner",
+      "count": 51
+    },
+    {
+      "true_class": "Cassava healthy",
+      "predicted_class": "Tomato verticulium wilt",
+      "count": 50
+    },
+    {
+      "true_class": "Maize streak virus",
+      "predicted_class": "Tomato verticulium wilt",
+      "count": 46
+    },
+    {
+      "true_class": "Cassava bacterial blight",
+      "predicted_class": "Tomato verticulium wilt",
+      "count": 45
+    },
+    {
+      "true_class": "Maize leaf spot",
+      "predicted_class": "Tomato verticulium wilt",
+      "count": 45
+    },
+    {
+      "true_class": "Tomato septoria leaf spot",
+      "predicted_class": "Cassava bacterial blight",
+      "count": 44
+    },
+    {
+      "true_class": "Cashew anthracnose",
+      "predicted_class": "Cashew leaf miner",
+      "count": 43
+    }
+  ],
+  "low_recall_classes_under_70": [
+    {
+      "class": "Cashew anthracnose",
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1_score": 0.0,
+      "support": 173
+    },
+    {
+      "class": "Cashew gumosis",
+      "recall": 0.0256,
+      "precision": 0.3333,
+      "f1_score": 0.0476,
+      "support": 39
+    },
+    {
+      "class": "Cashew healthy",
+      "recall": 0.0365,
+      "precision": 0.1282,
+      "f1_score": 0.0568,
+      "support": 137
+    },
+    {
+      "class": "Cashew leaf miner",
+      "recall": 0.3841,
+      "precision": 0.0912,
+      "f1_score": 0.1474,
+      "support": 138
+    },
+    {
+      "class": "Cashew red rust",
+      "recall": 0.0833,
+      "precision": 0.4,
+      "f1_score": 0.1379,
+      "support": 168
+    },
+    {
+      "class": "Cassava bacterial blight",
+      "recall": 0.0192,
+      "precision": 0.0459,
+      "f1_score": 0.027,
+      "support": 261
+    },
+    {
+      "class": "Cassava brown spot",
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1_score": 0.0,
+      "support": 148
+    },
+    {
+      "class": "Cassava green mite",
+      "recall": 0.1089,
+      "precision": 0.0991,
+      "f1_score": 0.1038,
+      "support": 101
+    },
+    {
+      "class": "Cassava healthy",
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1_score": 0.0,
+      "support": 119
+    },
+    {
+      "class": "Cassava mosaic",
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1_score": 0.0,
+      "support": 121
+    },
+    {
+      "class": "Maize fall armyworm",
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1_score": 0.0,
+      "support": 29
+    },
+    {
+      "class": "Maize grasshoper",
+      "recall": 0.0597,
+      "precision": 0.0179,
+      "f1_score": 0.0275,
+      "support": 67
+    },
+    {
+      "class": "Maize healthy",
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1_score": 0.0,
+      "support": 21
+    },
+    {
+      "class": "Maize leaf beetle",
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1_score": 0.0,
+      "support": 95
+    },
+    {
+      "class": "Maize leaf blight",
+      "recall": 0.0495,
+      "precision": 0.0472,
+      "f1_score": 0.0483,
+      "support": 101
+    },
+    {
+      "class": "Maize leaf spot",
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1_score": 0.0,
+      "support": 126
+    },
+    {
+      "class": "Maize streak virus",
+      "recall": 0.0102,
+      "precision": 0.1111,
+      "f1_score": 0.0187,
+      "support": 98
+    },
+    {
+      "class": "Tomato healthy",
+      "recall": 0.0426,
+      "precision": 0.0145,
+      "f1_score": 0.0216,
+      "support": 47
+    },
+    {
+      "class": "Tomato leaf blight",
+      "recall": 0.0077,
+      "precision": 0.0085,
+      "f1_score": 0.0081,
+      "support": 130
+    },
+    {
+      "class": "Tomato leaf curl",
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1_score": 0.0,
+      "support": 52
+    },
+    {
+      "class": "Tomato septoria leaf spot",
+      "recall": 0.1496,
+      "precision": 0.1054,
+      "f1_score": 0.1237,
+      "support": 274
+    },
+    {
+      "class": "Tomato verticulium wilt",
+      "recall": 0.026,
+      "precision": 0.0048,
+      "f1_score": 0.008,
+      "support": 77
+    }
+  ],
+  "per_class_report": {
+    "Cashew anthracnose": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 173.0
+    },
+    "Cashew gumosis": {
+      "precision": 0.3333333333333333,
+      "recall": 0.02564102564102564,
+      "f1-score": 0.047619047619047616,
+      "support": 39.0
+    },
+    "Cashew healthy": {
+      "precision": 0.1282051282051282,
+      "recall": 0.0364963503649635,
+      "f1-score": 0.056818181818181816,
+      "support": 137.0
+    },
+    "Cashew leaf miner": {
+      "precision": 0.09122203098106713,
+      "recall": 0.38405797101449274,
+      "f1-score": 0.1474269819193324,
+      "support": 138.0
+    },
+    "Cashew red rust": {
+      "precision": 0.4,
+      "recall": 0.08333333333333333,
+      "f1-score": 0.13793103448275862,
+      "support": 168.0
+    },
+    "Cassava bacterial blight": {
+      "precision": 0.045871559633027525,
+      "recall": 0.019157088122605363,
+      "f1-score": 0.02702702702702703,
+      "support": 261.0
+    },
+    "Cassava brown spot": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 148.0
+    },
+    "Cassava green mite": {
+      "precision": 0.0990990990990991,
+      "recall": 0.10891089108910891,
+      "f1-score": 0.10377358490566038,
+      "support": 101.0
+    },
+    "Cassava healthy": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 119.0
+    },
+    "Cassava mosaic": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 121.0
+    },
+    "Maize fall armyworm": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 29.0
+    },
+    "Maize grasshoper": {
+      "precision": 0.017857142857142856,
+      "recall": 0.05970149253731343,
+      "f1-score": 0.027491408934707903,
+      "support": 67.0
+    },
+    "Maize healthy": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 21.0
+    },
+    "Maize leaf beetle": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 95.0
+    },
+    "Maize leaf blight": {
+      "precision": 0.04716981132075472,
+      "recall": 0.04950495049504951,
+      "f1-score": 0.04830917874396135,
+      "support": 101.0
+    },
+    "Maize leaf spot": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 126.0
+    },
+    "Maize streak virus": {
+      "precision": 0.1111111111111111,
+      "recall": 0.01020408163265306,
+      "f1-score": 0.018691588785046728,
+      "support": 98.0
+    },
+    "Tomato healthy": {
+      "precision": 0.014492753623188406,
+      "recall": 0.0425531914893617,
+      "f1-score": 0.021621621621621623,
+      "support": 47.0
+    },
+    "Tomato leaf blight": {
+      "precision": 0.008547008547008548,
+      "recall": 0.007692307692307693,
+      "f1-score": 0.008097165991902834,
+      "support": 130.0
+    },
+    "Tomato leaf curl": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 52.0
+    },
+    "Tomato septoria leaf spot": {
+      "precision": 0.10539845758354756,
+      "recall": 0.14963503649635038,
+      "f1-score": 0.12368024132730016,
+      "support": 274.0
+    },
+    "Tomato verticulium wilt": {
+      "precision": 0.004750593824228029,
+      "recall": 0.025974025974025976,
+      "f1-score": 0.008032128514056224,
+      "support": 77.0
+    },
+    "accuracy": 0.05749405233941316,
+    "macro avg": {
+      "precision": 0.06395718318721076,
+      "recall": 0.045584624812845045,
+      "f1-score": 0.035296326895027486,
+      "support": 2522.0
+    },
+    "weighted avg": {
+      "precision": 0.07145953249412818,
+      "recall": 0.05749405233941316,
+      "f1-score": 0.04592481846187831,
+      "support": 2522.0
+    }
+  }
+}

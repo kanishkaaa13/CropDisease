@@ -30,23 +30,34 @@ def get_disease_model():
     if _disease_model is not None:
         return _disease_model
 
-    weights_path = WEIGHTS_DIR / "disease_classifier.pth"
+    weights_path = WEIGHTS_DIR / "disease_classifier_efficientnet_b0.pth"
     if not weights_path.exists():
-        logger.warning(
-            "Model weights not found at %s — running in mock/scaffold mode.", weights_path
+        weights_path = WEIGHTS_DIR / "disease_classifier.pth"
+    if not weights_path.exists():
+        raise FileNotFoundError(
+            f"Model weights not found at {weights_path}. Model execution disabled."
         )
-        return None
 
     try:
         import torch
         import torchvision.models as models
 
-        model = models.resnet50(pretrained=False)
-        model.load_state_dict(torch.load(weights_path, map_location="cpu"))
+        checkpoint = torch.load(weights_path, map_location="cpu")
+        num_classes = len(checkpoint.get("classes", [])) if isinstance(checkpoint, dict) else 22
+        
+        model = models.efficientnet_b0(weights=None)
+        if num_classes:
+            model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, num_classes)
+        
+        if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
+            model.load_state_dict(checkpoint["model_state_dict"])
+        else:
+            model.load_state_dict(checkpoint)
+            
         model.eval()
         _disease_model = model
         logger.info("Disease model loaded from %s", weights_path)
         return _disease_model
     except Exception as exc:
-        logger.error("Failed to load model: %s", exc)
-        return None
+        logger.error("Failed to load model from %s: %s", weights_path, exc)
+        raise RuntimeError(f"Failed to load model weights: {exc}")
