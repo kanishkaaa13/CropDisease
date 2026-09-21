@@ -1,0 +1,35 @@
+[33mf529e941[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m feat: persist disease scan results
+[33ma503c16e[m fix: import io for scan image decoding
+[33mce85ddf3[m chore: add local backend dependencies
+[33me0ec6bba[m xyz
+[33med3f470c[m feat: implement handover fixes - scan persistence, onboarding CRUD, postgis, and dynamic farmer dashboard
+[33m1313b914[m chore(backend): untrack committed SQLite database files from version control
+[33md31506b9[m fix(ml): add PIL fallback for corrupted and truncated JPEG images
+[33m48b2842f[m Fix backend startup and local Postgres config
+[33m321cf88f[m env changes
+[33mcfa0a76a[m[33m ([m[1;31morigin/test[m[33m)[m Fusion weights validation
+[33m5eeebaaa[m spatial risk analysis
+[33m6e3a5785[m Pest Trap → Object Detection
+[33m5951b36b[m crop stage tests
+[33mc68777fb[m Weather Feature Engineering
+[33m4e649b8a[m probability model
+[33maaa698f1[m image quality changes
+[33m5de65bf3[m dataset
+[33m96554d30[m req
+[33mc7c38ce6[m frontend backend starting
+[33m97963ea9[m command page
+[33m9b82d7da[m Government command center dashboard
+[33mcad6ea15[m Farmer app UI
+[33m4f35184a[m Integrated OfficerMap component
+[33md71e166a[m Geospatial hotspot map
+[33m1bf656dd[m rag advisory
+[33m580010c5[m risk engine
+[33m81957c47[m commit
+[33mefbf22ed[m commit
+[33m9a9b3509[m observations
+[33m36d73c6e[m farm py
+[33m338e1f2e[m weather snapshot
+[33mb4ff7f0e[m postgres impl
+[33m636bff9e[m front page
+[33m8d6a648f[m libraries install
+[33m42db0937[m first commit
