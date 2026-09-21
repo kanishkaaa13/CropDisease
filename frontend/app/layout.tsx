@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import { I18nProvider } from "@/lib/i18n";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -16,10 +17,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Navbar />
-        <main className="min-h-screen bg-gradient-to-br from-green-950 via-slate-900 to-emerald-950">
-          {children}
-        </main>
+        <I18nProvider>
+          <Navbar />
+          <main className="min-h-screen bg-gradient-to-br from-green-950 via-slate-900 to-emerald-950">
+            {children}
+          </main>
+        </I18nProvider>
       </body>
     </html>
   );

@@ -3,16 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useI18n, type Locale } from "@/lib/i18n";
 
 const NAV_LINKS = [
-  { href: "/farmer",  label: "🌾 Farmer App" },
-  { href: "/officer", label: "📊 Officer Dashboard" },
-  { href: "/admin",   label: "🏛️ Command Center" },
+  { href: "/farmer", key: "nav.farmer" },
+  { href: "/officer", key: "nav.officer" },
+  { href: "/admin", key: "nav.admin" },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { locale, setLocale, t, localeNames } = useI18n();
 
   return (
     <nav className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-lg border-b border-white/10">
@@ -28,7 +30,7 @@ export default function Navbar() {
 
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-1">
-          {NAV_LINKS.map(({ href, label }) => (
+          {NAV_LINKS.map(({ href, key }) => (
             <Link
               key={href}
               href={href}
@@ -38,10 +40,25 @@ export default function Navbar() {
                   : "text-slate-400 hover:text-white hover:bg-white/10"
                 }`}
             >
-              {label}
+              {t(key)}
             </Link>
           ))}
         </div>
+
+        <label className="hidden md:flex items-center gap-2 text-xs text-slate-400">
+          <span className="sr-only">{t("nav.language")}</span>
+          <span aria-hidden="true">文</span>
+          <select
+            value={locale}
+            onChange={(event) => setLocale(event.target.value as Locale)}
+            className="bg-slate-900 text-slate-200 border border-white/10 rounded-lg px-2 py-1.5 outline-none focus:border-emerald-500"
+            aria-label={t("nav.language")}
+          >
+            {(Object.keys(localeNames) as Locale[]).map((code) => (
+              <option key={code} value={code}>{localeNames[code]}</option>
+            ))}
+          </select>
+        </label>
 
         {/* Mobile hamburger */}
         <button
@@ -61,7 +78,7 @@ export default function Navbar() {
       {/* Mobile menu */}
       {open && (
         <div className="md:hidden px-4 pb-4 flex flex-col gap-1 border-t border-white/10 mt-1">
-          {NAV_LINKS.map(({ href, label }) => (
+          {NAV_LINKS.map(({ href, key }) => (
             <Link
               key={href}
               href={href}
@@ -72,9 +89,22 @@ export default function Navbar() {
                   : "text-slate-400 hover:text-white hover:bg-white/10"
                 }`}
             >
-              {label}
+              {t(key)}
             </Link>
           ))}
+          <label className="flex items-center justify-between px-4 py-3 text-sm text-slate-400">
+            <span>{t("nav.language")}</span>
+            <select
+              value={locale}
+              onChange={(event) => setLocale(event.target.value as Locale)}
+              className="bg-slate-900 text-slate-200 border border-white/10 rounded-lg px-2 py-1.5"
+              aria-label={t("nav.language")}
+            >
+              {(Object.keys(localeNames) as Locale[]).map((code) => (
+                <option key={code} value={code}>{localeNames[code]}</option>
+              ))}
+            </select>
+          </label>
         </div>
       )}
     </nav>

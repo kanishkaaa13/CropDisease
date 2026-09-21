@@ -1,0 +1,31 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "checking": "Checking...",
+    "backend_unreachable": "Backend unreachable",
+    "api": "API",
+    "database": "DB"
+  },
+  "nav": {
+    "farmer": "🌾 Farmer App",
+    "officer": "📊 Officer Dashboard",
+    "admin": "🏛️ Command Center",
+    "language": "Language",
+    "english": "English",
+    "hindi": "हिंदी",
+    "marathi": "मराठी"
+  },
+  "home": {
+    "title": "KrushiRakshak AI",
+    "subtitle": "Smart crop disease detection and advisory for every field.",
+    "farmer": "Farmer App",
+    "officer": "Field Officer",
+    "admin": "Command Center"
+  },
+  "severity": {
+    "low": "Low",
+    "moderate": "Moderate",
+    "high": "High",
+    "critical": "Critical"
+  }
+}

@@ -13,10 +13,14 @@ class HealthResponse(BaseModel):
 class TopPrediction(BaseModel):
     label: str
     confidence: float
+    disease_key: Optional[str] = None
+    localized_label: Optional[str] = None
 
 
 class ScanResponse(BaseModel):
     label: str
+    disease_key: Optional[str] = None
+    localized_label: Optional[str] = None
     confidence: float
     top3: List[TopPrediction]
     severity_estimate: float = Field(..., description="Estimated percentage of leaf area affected (0.0 to 100.0)")
@@ -24,6 +28,9 @@ class ScanResponse(BaseModel):
     gradcam_image_base64: str = Field(..., description="Base64 encoded PNG data URI of Grad-CAM heatmap overlay")
     low_confidence: bool = Field(..., description="True if top prediction confidence is below 0.60 threshold")
     status: str = Field(default="confident", description="Status of prediction: 'confident' or 'uncertain'")
+    status_key: Optional[str] = None
+    severity_key: Optional[str] = None
+    language: str = "en"
     observation_id: Optional[str] = Field(None, description="Persisted observation record ID")
     image_url: Optional[str] = Field(None, description="Relative URL of the stored scan image")
 
@@ -37,6 +44,7 @@ class RiskWhyFactor(BaseModel):
     factor: str
     details: str
     impact_score: float
+    factor_key: Optional[str] = None
 
 
 class RiskForecastDay(BaseModel):
@@ -44,6 +52,7 @@ class RiskForecastDay(BaseModel):
     date: str
     predicted_risk_score: float
     risk_level: str
+    risk_level_key: Optional[str] = None
     temp_max: float
     rain_mm: float
 
@@ -52,6 +61,8 @@ class RiskScoreResponse(BaseModel):
     crop_id: str
     overall_score: float
     risk_level: str  # LOW / MODERATE / HIGH / CRITICAL
+    risk_level_key: Optional[str] = None
+    language: str = "en"
     disease_risk: float
     pest_risk: float
     weather_risk: float
@@ -98,6 +109,10 @@ class RAGAdvisoryResponse(BaseModel):
     match_confidence: str = Field(..., description="exact_match, fuzzy_match, or generic_fallback")
     kb_entry_found: bool = Field(..., description="True if IPM knowledge base entry was found")
     advisory: Dict[str, LanguageAdvisoryContent] = Field(..., description="Multilingual advisories in en, hi, mr")
+    advisory_key: Optional[str] = None
+    disease_key: Optional[str] = None
+    crop_key: Optional[str] = None
+    language: str = "en"
     retrieved_kb: Dict[str, Any] = Field(..., description="Retrieved IPM Knowledge Base entry (ground truth)")
 
 

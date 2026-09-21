@@ -1,0 +1,31 @@
+{
+  "common": {
+    "loading": "लोड हो रहा है...",
+    "checking": "जांच हो रही है...",
+    "backend_unreachable": "बैकएंड उपलब्ध नहीं है",
+    "api": "एपीआई",
+    "database": "डेटाबेस"
+  },
+  "nav": {
+    "farmer": "🌾 किसान ऐप",
+    "officer": "📊 अधिकारी डैशबोर्ड",
+    "admin": "🏛️ कमांड सेंटर",
+    "language": "भाषा",
+    "english": "English",
+    "hindi": "हिंदी",
+    "marathi": "मराठी"
+  },
+  "home": {
+    "title": "कृषिरक्षक AI",
+    "subtitle": "हर खेत के लिए स्मार्ट फसल रोग पहचान और सलाह।",
+    "farmer": "किसान ऐप",
+    "officer": "क्षेत्र अधिकारी",
+    "admin": "कमांड सेंटर"
+  },
+  "severity": {
+    "low": "कम",
+    "moderate": "मध्यम",
+    "high": "उच्च",
+    "critical": "गंभीर"
+  }
+}

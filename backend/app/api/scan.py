@@ -4,7 +4,7 @@ import io
 import base64
 from pathlib import Path
 from typing import Optional
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, status
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, status, Query, Header
 from sqlalchemy.orm import Session
 from PIL import Image
 
@@ -14,6 +14,11 @@ from app.models.schemas import ScanResponse
 from app.ml.disease_classifier import get_disease_classifier
 from app.ml.image_quality import check_image_quality, get_farmer_friendly_message
 from app.services.dataset_manager import get_dataset_manager
+from app.i18n.catalog import (
+    disease_key,
+    get_locale_from_request,
+    translate_disease,
+)
 
 router = APIRouter()
 
@@ -39,6 +44,8 @@ async def scan_crop_disease(
     gps_lat: Optional[float] = Form(None, description="Latitude of scan location"),
     gps_lng: Optional[float] = Form(None, description="Longitude of scan location"),
     notes: Optional[str] = Form(None, description="Optional notes"),
+    lang: Optional[str] = Query(None, description="Response language: en, hi, or mr"),
+    accept_language: Optional[str] = Header(None, alias="Accept-Language"),
     db: Session = Depends(get_db),
 ):
     # Validate content type
@@ -117,6 +124,28 @@ async def scan_crop_disease(
         else:
             scan_result["status"] = "confident"
             scan_result["low_confidence"] = False
+
+        locale = get_locale_from_request(lang, accept_language)
+        predicted_label = str(scan_result.get("label", "Unknown"))
+        scan_result["disease_key"] = disease_key(predicted_label)
+        scan_result["localized_label"] = translate_disease(predicted_label, locale)
+        scan_result["status_key"] = scan_result["status"]
+        severity_pct = float(scan_result.get("severity_pct", 0.0))
+        scan_result["severity_key"] = (
+            "critical" if severity_pct >= 75 else
+            "high" if severity_pct >= 50 else
+            "moderate" if severity_pct >= 25 else
+            "low"
+        )
+        scan_result["language"] = locale
+        scan_result["top3"] = [
+            {
+                **prediction,
+                "disease_key": disease_key(str(prediction.get("label", "Unknown"))),
+                "localized_label": translate_disease(str(prediction.get("label", "Unknown")), locale),
+            }
+            for prediction in scan_result.get("top3", [])
+        ]
 
         # Save Grad-CAM image to disk instead of storing the huge Base64
         # string inside PostgreSQL.
