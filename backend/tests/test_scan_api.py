@@ -12,9 +12,10 @@ import numpy as np
 from PIL import Image
 from fastapi.testclient import TestClient
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from main import app
 from app.db.connection import get_db
+from app.ml.disease_classifier import DiseaseClassifier, DiseaseProbability
 
 client = TestClient(app)
 
@@ -26,6 +27,24 @@ def override_get_db():
     yield mock_db
 
 app.dependency_overrides[get_db] = override_get_db
+
+# Create a mock disease classifier fixture for API schema testing
+def get_mock_classifier():
+    mock_clf = MagicMock(spec=DiseaseClassifier)
+    mock_clf.scan_crop_image.return_value = {
+        "predicted_label": "Tomato leaf blight",
+        "confidence": 0.88,
+        "top3": [
+            {"label": "Tomato leaf blight", "confidence": 0.88},
+            {"label": "Tomato septoria leaf spot", "confidence": 0.08},
+            {"label": "Tomato healthy", "confidence": 0.04}
+        ],
+        "is_low_confidence": False,
+        "severity_pct": 18.5,
+        "severity_estimate": 18.5,
+        "gradcam_image_base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+    }
+    return mock_clf
 
 
 def create_valid_green_leaf_image(width=300, height=300) -> bytes:
@@ -58,11 +77,12 @@ def test_scan_valid_leaf_image():
     """Test /api/v1/scan with a valid leaf image."""
     img_bytes = create_valid_green_leaf_image()
 
-    response = client.post(
-        "/api/scan",
-        files={"file": ("valid_leaf.jpg", img_bytes, "image/jpeg")},
-        data={"notes": "Test valid leaf scan"}
-    )
+    with patch("app.api.scan.get_disease_classifier", return_value=get_mock_classifier()):
+        response = client.post(
+            "/api/scan",
+            files={"file": ("valid_leaf.jpg", img_bytes, "image/jpeg")},
+            data={"notes": "Test valid leaf scan"}
+        )
 
     assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
     data = response.json()

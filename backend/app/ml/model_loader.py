@@ -43,20 +43,24 @@ def get_disease_model():
         import torchvision.models as models
 
         checkpoint = torch.load(weights_path, map_location="cpu")
-        num_classes = len(checkpoint.get("classes", [])) if isinstance(checkpoint, dict) else 22
         
+        # Enforce trained validation gate
+        if not isinstance(checkpoint, dict) or not checkpoint.get("trained", False):
+            raise RuntimeError(
+                f"Model checkpoint at {weights_path} is an untrained placeholder or missing 'trained: True' flag. "
+                "Please train the model using ml-training/train_kaggle.ipynb and place the trained weights file."
+            )
+
+        num_classes = len(checkpoint.get("classes", []))
         model = models.efficientnet_b0(weights=None)
         if num_classes:
             model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, num_classes)
         
-        if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
-            model.load_state_dict(checkpoint["model_state_dict"])
-        else:
-            model.load_state_dict(checkpoint)
+        model.load_state_dict(checkpoint["model_state_dict"])
             
         model.eval()
         _disease_model = model
-        logger.info("Disease model loaded from %s", weights_path)
+        logger.info("Trained disease model loaded from %s (classes=%d)", weights_path, num_classes)
         return _disease_model
     except Exception as exc:
         logger.error("Failed to load model from %s: %s", weights_path, exc)

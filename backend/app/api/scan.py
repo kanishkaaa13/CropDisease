@@ -103,6 +103,12 @@ async def scan_crop_disease(
         classifier = get_disease_classifier()
         scan_result = classifier.scan_crop_image(pil_image)
 
+        # Standardize fields for ScanResponse schema
+        if "label" not in scan_result and "predicted_label" in scan_result:
+            scan_result["label"] = scan_result["predicted_label"]
+        if "severity_estimate" not in scan_result or not isinstance(scan_result.get("severity_estimate"), (int, float)):
+            scan_result["severity_estimate"] = float(scan_result.get("severity_pct", 0.0))
+
         # 3b. Confidence Threshold & Status handling
         conf = float(scan_result.get("confidence", 0.0))
         if conf < CONFIDENCE_THRESHOLD:

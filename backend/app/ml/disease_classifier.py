@@ -129,19 +129,22 @@ class DiseaseClassifier:
             logger.info("Loading DiseaseClassifier model from %s on %s...", self.weights_path, self.device)
             checkpoint = torch.load(self.weights_path, map_location=self.device)
 
-            if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
-                self.classes = checkpoint.get("classes", self.classes)
-                self.temperature = float(checkpoint.get("temperature", 1.0))
-                num_classes = len(self.classes)
+            if not isinstance(checkpoint, dict) or not checkpoint.get("trained", False):
+                raise RuntimeError(
+                    f"Model checkpoint at {self.weights_path} is an untrained placeholder or missing 'trained: True' flag. "
+                    "Please train the model on Kaggle using ml-training/train_kaggle.ipynb and place the trained weights file."
+                )
 
-                model = models.efficientnet_b0(weights=None)
-                model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
-                model.load_state_dict(checkpoint["model_state_dict"])
-            else:
-                num_classes = len(self.classes)
-                model = models.efficientnet_b0(weights=None)
-                model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
-                model.load_state_dict(checkpoint)
+            if "model_state_dict" not in checkpoint:
+                raise RuntimeError(f"Model checkpoint at {self.weights_path} is missing 'model_state_dict'.")
+
+            self.classes = checkpoint.get("classes", self.classes)
+            self.temperature = float(checkpoint.get("temperature", 1.0))
+            num_classes = len(self.classes)
+
+            model = models.efficientnet_b0(weights=None)
+            model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
+            model.load_state_dict(checkpoint["model_state_dict"])
 
             model.to(self.device)
             model.eval()
