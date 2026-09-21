@@ -324,18 +324,18 @@ export default function FarmerPage() {
   // Render Home Screen
   if (screen === "home") {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-4 py-8">
         {voiceAssistant}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
               🌱 {t("farmer.my_farms")}
             </h1>
-            <p className="text-slate-400 text-sm mt-1">{t("farmer.select_farm")}</p>
+            <p className="text-slate-400 text-sm mt-2">{t("farmer.select_farm")}</p>
           </div>
           <button
             onClick={() => setShowAddFarmModal(true)}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-lg"
+            className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg shadow-emerald-500/20"
           >
             {t("farmer.add_farm")}
           </button>
@@ -344,15 +344,15 @@ export default function FarmerPage() {
         {fetchingData ? (
           <div className="text-center py-12 text-slate-400">{t("farmer.loading_farms")}</div>
         ) : farms.length === 0 ? (
-          <div className="glass p-8 rounded-2xl text-center max-w-md mx-auto my-8 border border-white/10">
+          <div className="glass p-8 rounded-xl text-center max-w-md mx-auto my-12 border border-white/10">
             <div className="text-5xl mb-4">🌾</div>
-            <h3 className="text-lg font-bold text-white mb-2">{t("farmer.no_farms")}</h3>
+            <h3 className="text-lg font-semibold text-white mb-2">{t("farmer.no_farms")}</h3>
             <p className="text-sm text-slate-400 mb-6">
               {t("farmer.register_hint")}
             </p>
             <button
               onClick={() => setShowAddFarmModal(true)}
-              className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm transition-all"
+              className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg shadow-emerald-500/20"
             >
               {t("farmer.register_farm")}
             </button>
@@ -376,26 +376,26 @@ export default function FarmerPage() {
         {/* Modal for adding new farm */}
         {showAddFarmModal && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="glass p-6 rounded-2xl max-w-md w-full border border-white/20">
-              <h2 className="text-xl font-bold text-white mb-4">🌱 Register New Farm</h2>
+            <div className="glass p-6 rounded-xl max-w-md w-full border border-white/20">
+              <h2 className="text-lg font-semibold text-white mb-5">🌱 Register New Farm</h2>
               <form onSubmit={handleCreateFarm} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Farm Name</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-2">Farm Name</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Main Plot"
                     value={newFarmName}
                     onChange={(e) => setNewFarmName(e.target.value)}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm"
+                    className="w-full px-4 py-2.5 bg-slate-900/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500 transition-all duration-200"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Primary Crop</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-2">Primary Crop</label>
                   <select
                     value={newCropType}
                     onChange={(e) => setNewCropType(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-800 border border-white/10 rounded-lg text-white text-sm"
+                    className="w-full px-4 py-2.5 bg-slate-900/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500 transition-all duration-200"
                   >
                     <option value="Tomato">Tomato</option>
                     <option value="Maize">Maize</option>
@@ -405,27 +405,27 @@ export default function FarmerPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Village / Location</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-2">Village / Location</label>
                   <input
                     type="text"
                     placeholder="e.g. Nashik"
                     value={newVillage}
                     onChange={(e) => setNewVillage(e.target.value)}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm"
+                    className="w-full px-4 py-2.5 bg-slate-900/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500 transition-all duration-200"
                   />
                 </div>
                 <div className="flex justify-end gap-3 pt-4">
                   <button
                     type="button"
                     onClick={() => setShowAddFarmModal(false)}
-                    className="px-4 py-2 text-slate-400 hover:text-white text-sm"
+                    className="px-5 py-2.5 text-slate-400 hover:text-white text-sm font-semibold transition-colors duration-200"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-sm"
+                    className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-all duration-200 disabled:opacity-50 shadow-lg shadow-emerald-500/20"
                   >
                     {loading ? "Saving..." : "Save Farm"}
                   </button>
@@ -437,7 +437,7 @@ export default function FarmerPage() {
 
         <button
           onClick={() => setScreen("alerts")}
-          className="mt-6 w-full py-3 glass border border-white/10 text-slate-300 rounded-xl text-sm font-semibold hover:bg-white/5 transition-all"
+          className="mt-8 w-full py-3 glass border border-white/10 text-slate-300 rounded-lg text-sm font-semibold hover:bg-white/5 transition-all duration-200"
         >
           {t("farmer.alerts")} ({alerts.length})
         </button>
@@ -454,28 +454,28 @@ export default function FarmerPage() {
   // Render Scan Screen
   if (screen === "scan") {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-4 py-8">
         {voiceAssistant}
-        <button onClick={goBack} className="mb-4 text-slate-400 text-sm hover:text-white flex items-center gap-1">
+        <button onClick={goBack} className="mb-4 text-slate-400 text-sm hover:text-white flex items-center gap-1 transition-colors duration-200">
           ← Back
         </button>
 
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
             📸 Scan {selectedFarm?.cropName}
           </h1>
-          <p className="text-slate-400 text-sm mt-1">{selectedFarm?.name}</p>
+          <p className="text-slate-400 text-sm mt-2">{selectedFarm?.name}</p>
         </div>
 
-        <div className="glass p-6 rounded-2xl">
+        <div className="glass p-6 rounded-xl border border-white/10">
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
             <div
               onClick={() => fileRef.current?.click()}
-              className="border-2 border-dashed border-emerald-500/30 hover:border-emerald-500 rounded-2xl p-8 text-center cursor-pointer transition-all bg-white/[0.02] hover:bg-emerald-500/5"
+              className="border-2 border-dashed border-emerald-500/30 hover:border-emerald-500 rounded-xl p-8 text-center cursor-pointer transition-all duration-200 bg-white/[0.02] hover:bg-emerald-500/5"
             >
               {imagePreview ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={imagePreview} alt="Crop preview" className="max-h-64 mx-auto rounded-xl object-cover shadow-lg" />
+                <img src={imagePreview} alt="Crop preview" className="max-h-64 mx-auto rounded-lg object-cover shadow-lg" />
               ) : (
                 <div className="text-slate-400 py-8">
                   <div className="text-5xl mb-3">📸</div>
@@ -494,13 +494,13 @@ export default function FarmerPage() {
             />
 
             {blurError && (
-              <div className="bg-amber-500/20 border border-amber-500/30 rounded-xl px-4 py-3 text-amber-300 text-sm">
+              <div className="bg-amber-500/20 border border-amber-500/30 rounded-lg px-4 py-3 text-amber-300 text-sm">
                 ⚠️ {blurError}
               </div>
             )}
 
             {error && (
-              <div className="bg-red-500/20 border border-red-500/30 rounded-xl px-4 py-3 text-red-300 text-sm">
+              <div className="bg-red-500/20 border border-red-500/30 rounded-lg px-4 py-3 text-red-300 text-sm">
                 ⚠️ {error}
               </div>
             )}
@@ -515,7 +515,7 @@ export default function FarmerPage() {
             <button
               type="submit"
               disabled={loading || !imageFile}
-              className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-lg transition-all disabled:opacity-50"
+              className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-lg font-semibold transition-all duration-200 disabled:opacity-50 shadow-lg shadow-emerald-500/20"
             >
               {loading ? "Analyzing..." : "🔍 Scan Crop"}
             </button>
@@ -528,18 +528,18 @@ export default function FarmerPage() {
   // Render Result Screen
   if (screen === "result" && scanResult) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-4 py-8">
         {voiceAssistant}
-        <button onClick={goBack} className="mb-4 text-slate-400 text-sm hover:text-white flex items-center gap-1">
+        <button onClick={goBack} className="mb-4 text-slate-400 text-sm hover:text-white flex items-center gap-1 transition-colors duration-200">
           ← Back to Farms
         </button>
 
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
               🔬 Scan Results
             </h1>
-            <p className="text-slate-400 text-sm mt-1">{selectedFarm?.name} • {selectedFarm?.cropName}</p>
+            <p className="text-slate-400 text-sm mt-2">{selectedFarm?.name} • {selectedFarm?.cropName}</p>
           </div>
 
           <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-1 rounded-lg">
@@ -548,10 +548,10 @@ export default function FarmerPage() {
                 key={l.code}
                 type="button"
                 onClick={() => handleLanguageChange(l.code)}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                className={`px-4 py-2 rounded-md text-xs font-semibold transition-all duration-200 ${
                   selectedLang === l.code
-                    ? "bg-emerald-500 text-slate-950 font-bold"
-                    : "text-slate-400 hover:text-white"
+                    ? "bg-emerald-500 text-white font-semibold"
+                    : "text-slate-400 hover:text-white hover:bg-white/5"
                 }`}
               >
                 {l.label}
@@ -561,39 +561,14 @@ export default function FarmerPage() {
         </div>
 
         {/* Diagnosis Card */}
-        <div className="glass p-6 rounded-2xl mb-4 border-emerald-500/30">
+        <div className="glass p-6 rounded-xl mb-6 border border-emerald-500/30">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h2 className="text-xl font-bold text-white">
-
-          <div className="mb-4">
-            {!showChat ? (
-              <button onClick={() => setShowChat(true)} className="w-full py-3 rounded-xl border border-sky-500/30 bg-sky-500/10 text-sky-300 font-bold text-sm hover:bg-sky-500/20">
-                💬 Ask an officer about this diagnosis
-              </button>
-            ) : (
-              <ChatPanel
-                userId={farmerId}
-                role="farmer"
-                farmId={selectedFarm?.id}
-                officerId="officer-1"
-                scanId={scanResult.scan_id}
-                diagnosis={scanResult.localized_label || scanResult.label}
-                onClose={() => setShowChat(false)}
-              />
-            )}
-          </div>
-
-          <button
-            onClick={() => speakText(`${scanResult.localized_label || scanResult.label}. Severity ${scanResult.severity_pct} percent. ${advisory?.treatments.cultural?.[0] || "Please monitor the crop and contact an officer if symptoms worsen."}`, locale, () => setVoiceMessage("No Marathi voice found; using the browser default voice."))}
-            className="mb-4 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-bold text-sky-300 hover:bg-sky-500/20"
-          >
-            🔊 Read aloud
-          </button>
+              <h2 className="text-lg font-semibold text-white">
                 {scanResult.label.replace("___", " - ").replace("_", " ")}
               </h2>
               {scanResult.low_confidence && (
-                <span className="bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs px-2 py-1 rounded-md font-medium mt-2 inline-block">
+                <span className="bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs px-3 py-1 rounded-md font-medium mt-2 inline-block">
                   ⚠️ Low Confidence
                 </span>
               )}
@@ -601,12 +576,12 @@ export default function FarmerPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white/5 rounded-xl p-4">
-              <p className="text-xs text-slate-400 mb-1">Confidence</p>
+            <div className="bg-white/5 rounded-lg p-4">
+              <p className="text-xs text-slate-400 mb-2">Confidence</p>
               <p className="text-2xl font-bold text-emerald-400">{(scanResult.confidence * 100).toFixed(0)}%</p>
             </div>
-            <div className="bg-white/5 rounded-xl p-4">
-              <p className="text-xs text-slate-400 mb-1">Severity</p>
+            <div className="bg-white/5 rounded-lg p-4">
+              <p className="text-xs text-slate-400 mb-2">Severity</p>
               <p className="text-2xl font-bold text-amber-400">{scanResult.severity_pct}%</p>
             </div>
           </div>

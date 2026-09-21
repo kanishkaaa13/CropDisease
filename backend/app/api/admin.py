@@ -9,9 +9,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.db.connection import get_db
+from app.db.models import User
 from app.models.schemas import AdminCommandStats, AdminAlertRequest
 from app.services.outbreak_detector import detect_emerging_outbreaks
 from app.data.maharashtra_locations import MAHARASHTRA_LOCATIONS
+from app.core.dependencies import require_admin
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,10 @@ router = APIRouter()
 
 
 @router.get("/stats", response_model=AdminCommandStats, summary="National & State Command Center KPIs")
-def admin_command_stats(db: Session = Depends(get_db)):
+def admin_command_stats(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
     try:
         import json
         from pathlib import Path
@@ -62,6 +67,7 @@ def admin_command_stats(db: Session = Depends(get_db)):
 @router.post("/alert", summary="Broadcast emergency advisory alert to targeted district/state")
 def broadcast_admin_alert(
     payload: AdminAlertRequest,
+    current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     try:
@@ -109,7 +115,10 @@ def broadcast_admin_alert(
 
 
 @router.get("/summary", summary="Admin dashboard summary statistics")
-def get_admin_summary(db: Session = Depends(get_db)):
+def get_admin_summary(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
     """
     Returns summary statistics for the admin dashboard:
     - Total monitored farms
@@ -179,6 +188,7 @@ def get_district_analytics(
     state: str = "Maharashtra",
     sort_by: str = "risk_score",
     sort_order: str = "desc",
+    current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """
@@ -271,6 +281,7 @@ def get_district_analytics(
 @router.get("/outbreaks", summary="Emerging outbreaks detection")
 def get_emerging_outbreaks(
     growth_threshold: float = 30.0,
+    current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """
@@ -307,6 +318,7 @@ def get_emerging_outbreaks(
 def get_risk_trend(
     state: str = "Maharashtra",
     days: int = 30,
+    current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """
@@ -363,7 +375,10 @@ def get_risk_trend(
 
 
 @router.get("/hotspots", summary="Risk hotspot data for map visualization")
-def get_hotspots(db: Session = Depends(get_db)):
+def get_hotspots(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
     """
     Returns hotspot data for each Maharashtra location including:
     - Location name, lat/lng, district, climate zone

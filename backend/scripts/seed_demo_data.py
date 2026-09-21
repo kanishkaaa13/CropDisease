@@ -23,6 +23,9 @@ from app.data.maharashtra_locations import (
     get_common_pests_for_location,
     get_disease_skew_for_location
 )
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def seed_demo_data():
@@ -58,8 +61,42 @@ def seed_demo_data():
         db.query(Crop).delete()
         db.query(Farm).delete()
         db.query(User).filter(User.role == UserRole.farmer).delete()
+        db.query(User).filter(User.role == UserRole.officer).delete()
         db.commit()
         print("✓ Cleared existing demo data")
+        
+        # Create demo users with known credentials
+        # Demo farmer: farmer@krushirakshak.in / farmer123
+        demo_farmer = User(
+            name="Demo Farmer",
+            email="farmer@krushirakshak.in",
+            password_hash=pwd_context.hash("farmer123"),
+            phone="+919876543210",
+            role=UserRole.farmer,
+            district="Nashik",
+            state="Maharashtra",
+            language_pref="en",
+            created_at=datetime.now(timezone.utc) - timedelta(days=30)
+        )
+        db.add(demo_farmer)
+        db.flush()
+        print("✓ Created demo farmer (farmer@krushirakshak.in / farmer123)")
+        
+        # Demo officer: officer@krushirakshak.in / officer123
+        demo_officer = User(
+            name="Demo Officer",
+            email="officer@krushirakshak.in",
+            password_hash=pwd_context.hash("officer123"),
+            phone="+919876543211",
+            role=UserRole.officer,
+            district="Nashik",
+            state="Maharashtra",
+            language_pref="en",
+            created_at=datetime.now(timezone.utc) - timedelta(days=30)
+        )
+        db.add(demo_officer)
+        db.flush()
+        print("✓ Created demo officer (officer@krushirakshak.in / officer123)")
         
         # Use Maharashtra locations from data file
         locations = MAHARASHTRA_LOCATIONS
@@ -73,28 +110,16 @@ def seed_demo_data():
         ]
         
         # Create demo farmers and farms based on Maharashtra locations
-        farmers = []
+        # Use the demo farmer for all farms
+        farmers = [demo_farmer]
         farms = []
         
         for i, location in enumerate(locations):
             village = villages[i % len(villages)]
             
-            # Create farmer
-            farmer = User(
-                name=f"Farmer {i+1}",
-                phone=f"+9198765{str(i).zfill(4)}",
-                role=UserRole.farmer,
-                district=location["district"],
-                state="Maharashtra",
-                created_at=datetime.now(timezone.utc) - timedelta(days=30+i)
-            )
-            db.add(farmer)
-            db.flush()
-            farmers.append(farmer)
-            
             # Create farm at location coordinates
             farm = Farm(
-                owner_id=farmer.id,
+                owner_id=demo_farmer.id,
                 name=f"{location['name']} Farm",
                 village=village,
                 taluka=location["district"],  # Use district as taluka for demo

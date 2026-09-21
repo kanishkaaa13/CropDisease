@@ -93,14 +93,14 @@ export default function OfficerPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-10">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Title & Role Selector */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black text-white tracking-tight">
+          <h1 className="text-3xl font-bold text-white tracking-tight">
             {t("officer.title")}
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-slate-400 text-sm mt-2">
             {t("officer.subtitle")}
           </p>
         </div>
@@ -112,20 +112,20 @@ export default function OfficerPage() {
               setUserRole(e.target.value as "officer" | "admin");
               localStorage.setItem("userRole", e.target.value);
             }}
-            className="px-3 py-2 bg-white/5 border border-white/10 text-slate-300 rounded-xl text-xs font-bold"
+            className="px-4 py-2.5 bg-slate-900/50 border border-white/10 text-slate-300 rounded-lg text-sm font-semibold focus:outline-none focus:border-emerald-500 transition-all duration-200"
           >
             <option value="officer">Officer</option>
             <option value="admin">Admin</option>
           </select>
           <button
             onClick={loadData}
-            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 rounded-xl text-xs font-bold transition-all"
+            className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg shadow-emerald-500/20"
           >
             {t("officer.refresh")}
           </button>
           <button
             onClick={() => setShowChat((open) => !open)}
-            className="px-4 py-2 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-300 rounded-xl text-xs font-bold transition-all"
+            className="px-5 py-2.5 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-300 rounded-lg text-sm font-semibold transition-all duration-200"
           >
             {t("officer.chat")}
           </button>
@@ -157,90 +157,92 @@ export default function OfficerPage() {
             { label: "Districts Monitored", value: stats.affected_districts, icon: "📍", color: "text-amber-400" },
             { label: "Top Outbreak Class", value: stats.top_diseases[0]?.name || "N/A", icon: "🦠", color: "text-emerald-400" },
           ].map(({ label, value, icon, color }) => (
-            <div key={label} className="glass p-5 flex flex-col justify-between">
-              <div className="flex items-center justify-between text-2xl mb-2">
-                <span>{icon}</span>
+            <div key={label} className="glass p-5 rounded-xl border border-white/10 hover:border-white/20 transition-all duration-200">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-3xl">{icon}</span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Live</span>
               </div>
-              <p className={`text-2xl font-extrabold ${color} truncate tabular-nums`}>{value}</p>
-              <p className="text-slate-400 text-xs mt-1 font-medium">{label}</p>
+              <p className={`text-3xl font-bold ${color} truncate tabular-nums`}>{value}</p>
+              <p className="text-slate-400 text-xs mt-2 font-medium">{label}</p>
             </div>
           ))}
         </div>
       )}
 
       {/* Geospatial Risk Hotspots Map */}
-      <div className="glass p-6 mb-8">
-        <h2 className="text-lg font-black text-white mb-4 flex items-center gap-2">
+      <div className="glass p-5 rounded-xl border border-white/10 mb-8">
+        <h2 className="text-base font-semibold text-white mb-2 flex items-center gap-2">
           🗺️ Maharashtra Risk Hotspots Map
         </h2>
         <p className="text-xs text-slate-400 mb-4">
           Color-coded markers show farm clusters by risk level. Click markers for cluster details.
         </p>
-        <OfficerMap officerLat={19.0} officerLng={73.0} />
+        <div className="rounded-lg overflow-hidden">
+          <OfficerMap officerLat={19.0} officerLng={73.0} />
+        </div>
       </div>
 
       {/* Prioritized Validation Queue */}
-      <div className="glass p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="glass p-5 rounded-xl border border-white/10">
+        <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="text-lg font-black text-white flex items-center gap-2">
+            <h2 className="text-base font-semibold text-white flex items-center gap-2">
               🔬 Prioritized Validation Queue
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-400 mt-1">
               Cases sorted by priority score (risk level, confidence, distance)
             </p>
           </div>
-          <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20">
+          <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-4 py-2 rounded-lg border border-emerald-500/20">
             {queueItems.length} Cases Pending
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
+        <div className="overflow-x-auto rounded-lg">
+          <table className="w-full text-sm text-left">
             <thead>
-              <tr className="border-b border-white/10 text-slate-400 uppercase tracking-wider text-[10px]">
-                <th className="pb-2">Priority</th>
-                <th className="pb-2">Farm & Location</th>
-                <th className="pb-2">AI Diagnosis</th>
-                <th className="pb-2 text-right">Confidence</th>
-                <th className="pb-2 text-right">Risk</th>
-                <th className="pb-2 text-right">Distance</th>
-                <th className="pb-2 text-right">Action</th>
+              <tr className="border-b border-white/10 bg-white/5 text-slate-400 uppercase tracking-wider text-[10px]">
+                <th className="py-3 px-4">Priority</th>
+                <th className="py-3 px-4">Farm & Location</th>
+                <th className="py-3 px-4">AI Diagnosis</th>
+                <th className="py-3 px-4 text-right">Confidence</th>
+                <th className="py-3 px-4 text-right">Risk</th>
+                <th className="py-3 px-4 text-right">Distance</th>
+                <th className="py-3 px-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {queueItems.slice(0, 10).map((item) => (
-                <tr key={item.ai_result_id} className="hover:bg-white/[0.02]">
-                  <td className="py-3">
-                    <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                <tr key={item.ai_result_id} className="hover:bg-white/5 transition-colors duration-200">
+                  <td className="py-3 px-4">
+                    <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20">
                       {item.priority_score.toFixed(1)}
                     </span>
                   </td>
-                  <td className="py-3">
-                    <p className="font-bold text-slate-200">{item.farm_name}</p>
-                    <p className="text-[10px] text-slate-400">{item.district} • {item.taluka}</p>
+                  <td className="py-3 px-4">
+                    <p className="font-semibold text-white">{item.farm_name}</p>
+                    <p className="text-xs text-slate-400">{item.district} • {item.taluka}</p>
                   </td>
-                  <td className="py-3">
+                  <td className="py-3 px-4">
                     <span className="font-semibold text-emerald-300">
                       {item.disease_label ? item.disease_label.replace("___", " - ") : "Scanning..."}
                     </span>
                   </td>
-                  <td className="py-3 text-right font-mono font-bold text-slate-300">
+                  <td className="py-3 px-4 text-right font-mono font-bold text-slate-300">
                     {item.confidence.toFixed(1)}%
                   </td>
-                  <td className="py-3 text-right">
-                    <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] ${riskBadgeClass[item.risk_level] || ""}`}>
+                  <td className="py-3 px-4 text-right">
+                    <span className={`px-2 py-1 rounded-full border font-semibold text-xs ${riskBadgeClass[item.risk_level] || ""}`}>
                       {item.risk_level}
                     </span>
                   </td>
-                  <td className="py-3 text-right font-mono text-slate-400">
+                  <td className="py-3 px-4 text-right font-mono text-slate-400">
                     {item.distance_km.toFixed(1)} km
                   </td>
-                  <td className="py-3 text-right">
+                  <td className="py-3 px-4 text-right">
                     <button
                       onClick={() => setSelectedQueueItem(item)}
-                      className="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs transition-all shadow"
+                      className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg text-xs transition-all duration-200 shadow-lg shadow-emerald-500/20"
                     >
                       Validate
                     </button>

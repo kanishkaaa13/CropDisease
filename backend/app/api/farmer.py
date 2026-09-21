@@ -20,6 +20,7 @@ from app.models.schemas import (
 from app.ml.disease_classifier import get_disease_classifier
 from app.services.weather import get_weather_risk
 from app.services.advisory import generate_advisory
+from app.core.dependencies import get_current_user, require_farmer
 
 router = APIRouter()
 
@@ -52,14 +53,15 @@ def register_farmer(payload: FarmerRegisterRequest, db: Session = Depends(get_db
 
 
 @router.post("/farms", response_model=FarmResponse, summary="Register a new farm plot")
-def create_farm(payload: FarmCreateRequest, db: Session = Depends(get_db)):
-    """Create a farm plot for a registered farmer."""
-    owner = db.query(User).filter(User.id == payload.owner_id).first()
-    if not owner:
-        raise HTTPException(status_code=404, detail="Farmer not found")
-
+def create_farm(
+    payload: FarmCreateRequest,
+    current_user: User = Depends(require_farmer),
+    db: Session = Depends(get_db)
+):
+    """Create a farm plot for the authenticated farmer."""
+    # Override owner_id with the authenticated user's ID
     new_farm = Farm(
-        owner_id=payload.owner_id,
+        owner_id=current_user.id,
         name=payload.name,
         village=payload.village,
         taluka=payload.taluka,
@@ -77,19 +79,26 @@ def create_farm(payload: FarmCreateRequest, db: Session = Depends(get_db)):
     return new_farm
 
 
-@router.get("/farms/{farmer_id}", response_model=List[FarmResponse], summary="Get all farms for a farmer")
-def get_farmer_farms(farmer_id: str, db: Session = Depends(get_db)):
-    """List all farms owned by the given farmer ID."""
-    farms = db.query(Farm).filter(Farm.owner_id == farmer_id).order_by(Farm.created_at.desc()).all()
+@router.get("/farms", response_model=List[FarmResponse], summary="Get all farms for authenticated farmer")
+def get_farmer_farms(
+    current_user: User = Depends(require_farmer),
+    db: Session = Depends(get_db)
+):
+    """List all farms owned by the authenticated farmer."""
+    farms = db.query(Farm).filter(Farm.owner_id == current_user.id).order_by(Farm.created_at.desc()).all()
     return farms
 
 
 @router.post("/crops", response_model=CropResponse, summary="Register a planted crop in a farm")
-def create_crop(payload: CropCreateRequest, db: Session = Depends(get_db)):
+def create_crop(
+    payload: CropCreateRequest,
+    current_user: User = Depends(require_farmer),
+    db: Session = Depends(get_db)
+):
     """Record a planted crop with sowing date."""
-    farm = db.query(Farm).filter(Farm.id == payload.farm_id).first()
+    farm = db.query(Farm).filter(Farm.id == payload.farm_id, Farm.owner_id == current_user.id).first()
     if not farm:
-        raise HTTPException(status_code=404, detail="Farm not found")
+        raise HTTPException(status_code=404, detail="Farm not found or access denied")
 
     new_crop = Crop(
         farm_id=payload.farm_id,
@@ -107,8 +116,15 @@ def create_crop(payload: CropCreateRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/crops/{farm_id}", response_model=List[CropResponse], summary="List crops for a farm")
-def get_farm_crops(farm_id: str, db: Session = Depends(get_db)):
-    """List all crops registered under a given farm."""
+def get_farm_crops(
+    farm_id: str,
+    current_user: User = Depends(require_farmer),
+    db: Session = Depends(get_db)
+):
+    """List all crops registered under a given farm (must own the farm)."""
+    farm = db.query(Farm).filter(Farm.id == farm_id, Farm.owner_id == current_user.id).first()
+    if not farm:
+        raise HTTPException(status_code=404, detail="Farm not found or access denied")
     crops = db.query(Crop).filter(Crop.farm_id == farm_id).order_by(Crop.created_at.desc()).all()
     return crops
 
@@ -121,12 +137,19 @@ def get_farm_crops(farm_id: str, db: Session = Depends(get_db)):
 async def detect_crop_disease(
     image: UploadFile = File(..., description="Crop leaf/plant image"),
     crop_type: str = Form(..., description="e.g. wheat, rice, tomato"),
-    farmer_id: Optional[str] = Form(None),
+    farm_id: Optional[str] = Form(None),
     latitude: Optional[float] = Form(None),
     longitude: Optional[float] = Form(None),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Diagnose disease from image using the classifier engine."""
+    # If farm_id is provided, verify ownership
+    if farm_id:
+        farm = db.query(Farm).filter(Farm.id == farm_id, Farm.owner_id == current_user.id).first()
+        if not farm:
+            raise HTTPException(status_code=403, detail="Access denied to this farm")
+    
     image_bytes = await image.read()
     try:
         pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
@@ -156,12 +179,15 @@ def weather_risk(lat: float, lon: float):
     return get_weather_risk(lat, lon)
 
 
-@router.get("/reports/{farmer_id}", response_model=List[FarmerReportSummary], summary="Get farmer's report history")
-def get_farmer_reports(farmer_id: str, db: Session = Depends(get_db)):
-    """Fetch past diagnostic observations and results for a farmer."""
+@router.get("/reports", response_model=List[FarmerReportSummary], summary="Get authenticated farmer's report history")
+def get_farmer_reports(
+    current_user: User = Depends(require_farmer),
+    db: Session = Depends(get_db)
+):
+    """Fetch past diagnostic observations and results for the authenticated farmer."""
     observations = (
         db.query(Observation)
-        .filter(Observation.reported_by == farmer_id)
+        .filter(Observation.reported_by == current_user.id)
         .order_by(Observation.created_at.desc())
         .all()
     )

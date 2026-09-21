@@ -10,20 +10,28 @@ from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 from app.db.connection import get_db
+from app.db.models import User
 from app.models.schemas import OfficerDashboardStats, ExpertValidationRequest, ExpertValidationResponse
 from app.services.risk_engine import compute_district_risk
+from app.core.dependencies import get_current_user, require_officer
 
 router = APIRouter()
 
 
 @router.get("/dashboard", response_model=OfficerDashboardStats, summary="Officer dashboard statistics")
-def officer_dashboard(db: Session = Depends(get_db)):
+def officer_dashboard(
+    current_user: User = Depends(require_officer),
+    db: Session = Depends(get_db)
+):
     try:
         from app.db.models import Observation, AIResult, Farm
 
-        total_obs = db.query(Observation).count()
-        high_sev = db.query(AIResult).filter(AIResult.severity_pct >= 50.0).count()
-        districts_count = db.query(Farm.district).distinct().count()
+        # Officers can see stats for their district only
+        district_filter = Farm.district == current_user.district if current_user.district else True
+
+        total_obs = db.query(Observation).join(Crop, Observation.crop_id == Crop.id).join(Farm, Crop.farm_id == Farm.id).filter(district_filter).count()
+        high_sev = db.query(AIResult).join(Observation, AIResult.observation_id == Observation.id).join(Crop, Observation.crop_id == Crop.id).join(Farm, Crop.farm_id == Farm.id).filter(district_filter).filter(AIResult.severity_pct >= 50.0).count()
+        districts_count = db.query(Farm.district).distinct().filter(district_filter).count()
 
         top_diseases_query = (
             db.query(AIResult.disease_label, func.count(AIResult.id))
@@ -53,8 +61,15 @@ def officer_dashboard(db: Session = Depends(get_db)):
 
 
 @router.get("/risk-map", summary="District-level risk heatmap data for Maharashtra")
-def risk_map(state: str = "Maharashtra", db: Session = Depends(get_db)):
+def risk_map(
+    state: str = "Maharashtra",
+    current_user: User = Depends(require_officer),
+    db: Session = Depends(get_db)
+):
     try:
+        # Officers can only see their district's risk map
+        if current_user.district:
+            return compute_district_risk(current_user.district, db)
         return compute_district_risk(state, db)
     except Exception as exc:
         raise HTTPException(
@@ -64,9 +79,16 @@ def risk_map(state: str = "Maharashtra", db: Session = Depends(get_db)):
 
 
 @router.get("/validations", summary="List pending AI scan diagnoses for expert validation")
-def list_pending_validations(limit: int = 20, db: Session = Depends(get_db)):
+def list_pending_validations(
+    limit: int = 20,
+    current_user: User = Depends(require_officer),
+    db: Session = Depends(get_db)
+):
     try:
         from app.db.models import AIResult, Observation, Crop, Farm, ExpertValidation
+
+        # Officers can only see validations in their district
+        district_filter = Farm.district == current_user.district if current_user.district else True
 
         validations = (
             db.query(AIResult)
@@ -74,6 +96,7 @@ def list_pending_validations(limit: int = 20, db: Session = Depends(get_db)):
             .join(Crop, Observation.crop_id == Crop.id)
             .join(Farm, Crop.farm_id == Farm.id)
             .outerjoin(ExpertValidation, AIResult.id == ExpertValidation.ai_result_id)
+            .filter(district_filter)
             .order_by(Observation.timestamp.desc())
             .limit(limit)
             .all()
@@ -311,6 +334,7 @@ def get_officer_queue(
     officer_lat: Optional[float] = 19.0,
     officer_lng: Optional[float] = 73.0,
     limit: int = 50,
+    current_user: User = Depends(require_officer),
     db: Session = Depends(get_db)
 ):
     """
@@ -324,6 +348,9 @@ def get_officer_queue(
         from app.services.risk_engine import haversine_distance_km
         import math
 
+        # Officers can only see queue in their district
+        district_filter = Farm.district == current_user.district if current_user.district else True
+
         # Query pending validations (not yet validated)
         pending_cases = (
             db.query(AIResult, Observation, Crop, Farm, RiskScore)
@@ -331,6 +358,7 @@ def get_officer_queue(
             .join(Crop, Observation.crop_id == Crop.id)
             .join(Farm, Crop.farm_id == Farm.id)
             .outerjoin(RiskScore, RiskScore.crop_id == Crop.id)
+            .filter(district_filter)
             .filter(AIResult.expert_validations == None)
             .order_by(Observation.timestamp.desc())
             .limit(limit)
@@ -418,6 +446,7 @@ def get_officer_queue(
 @router.post("/validate", response_model=ExpertValidationResponse, summary="Submit human-in-the-loop expert validation")
 def submit_expert_validation(
     payload: ExpertValidationRequest,
+    current_user: User = Depends(require_officer),
     db: Session = Depends(get_db)
 ):
     try:
@@ -430,15 +459,8 @@ def submit_expert_validation(
                 detail=f"AIResult with ID '{payload.ai_result_id}' not found."
             )
 
-        officer = db.query(User).filter(User.id == payload.officer_id).first()
-        if not officer:
-            # Fallback to first officer if specified ID not found
-            officer = db.query(User).filter(User.role == UserRole.officer).first()
-            if not officer:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Officer with ID '{payload.officer_id}' not found."
-                )
+        # Use the authenticated officer
+        officer = current_user
 
         mapped_verdict = getattr(ValidationVerdict, payload.verdict.lower(), ValidationVerdict.confirmed)
 
