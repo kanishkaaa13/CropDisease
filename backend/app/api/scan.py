@@ -1,6 +1,7 @@
 import uuid
 import logging
 import io
+import base64
 from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, status
@@ -94,6 +95,31 @@ async def scan_crop_disease(
         classifier = get_disease_classifier()
         scan_result = classifier.scan_crop_image(pil_image)
 
+        # Save Grad-CAM image to disk instead of storing the huge Base64
+        # string inside PostgreSQL.
+        heat_map_url = None
+        gradcam_base64 = scan_result.get("gradcam_image_base64")
+
+        if gradcam_base64:
+            try:
+                gradcam_dir = uploads_dir / "gradcam"
+                gradcam_dir.mkdir(parents=True, exist_ok=True)
+
+                gradcam_filename = f"{uuid.uuid4()}.png"
+                gradcam_path = gradcam_dir / gradcam_filename
+
+                # Remove "data:image/png;base64," prefix if present
+                base64_data = gradcam_base64.split(",", 1)[-1]
+                gradcam_bytes = base64.b64decode(base64_data)
+
+                with open(gradcam_path, "wb") as f:
+                    f.write(gradcam_bytes)
+
+                heat_map_url = f"/uploads/scans/gradcam/{gradcam_filename}"
+
+            except Exception as gradcam_err:
+                logger.warning("Failed to save Grad-CAM image: %s", gradcam_err)
+
         # 4. Persist Observation + AIResult to database
         observation_id = None
         target_crop_id = crop_id
@@ -127,7 +153,7 @@ async def scan_crop_disease(
                     confidence=float(scan_result.get("confidence", 0.0)),
                     severity_pct=float(scan_result.get("severity_pct", 0.0)),
                     model_version="v1.0.0",
-                    heat_map_url=scan_result.get("gradcam_image_base64"),
+                    heat_map_url=heat_map_url,
                     treatment_recommendations={"top3": scan_result.get("top3", [])},
                 )
                 db.add(ai_res)
