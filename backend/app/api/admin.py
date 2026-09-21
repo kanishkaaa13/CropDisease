@@ -118,7 +118,7 @@ def get_admin_summary(db: Session = Depends(get_db)):
     - Pending expert validations
     """
     try:
-        from app.db.models import Farm, Observation, AIResult, Alert, ExpertValidation
+        from app.db.models import Farm, Crop, Observation, AIResult, Alert, ExpertValidation
 
         # Total monitored farms
         total_farms = db.query(Farm).count()

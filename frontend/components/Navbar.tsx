@@ -7,6 +7,7 @@ import { useI18n, type Locale } from "@/lib/i18n";
 
 const NAV_LINKS = [
   { href: "/farmer", key: "nav.farmer" },
+  { href: "/predict", key: "nav.predict" },
   { href: "/officer", key: "nav.officer" },
   { href: "/admin", key: "nav.admin" },
 ];

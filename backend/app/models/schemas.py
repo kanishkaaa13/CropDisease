@@ -56,6 +56,21 @@ class ChatPageResponse(BaseModel):
     limit: int
 
 
+class AssistantAskRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=500)
+    lang: str = "en"
+    disease_label: Optional[str] = None
+    crop_name: Optional[str] = None
+    severity_pct: Optional[float] = None
+
+
+class AssistantAskResponse(BaseModel):
+    answer: str
+    language: str
+    source: str
+    spoken: bool = True
+
+
 class TopPrediction(BaseModel):
     label: str
     confidence: float
@@ -85,6 +100,28 @@ class ScanResponse(BaseModel):
 
 class RiskScoreRequest(BaseModel):
     crop_id: str = Field(..., example="550e8400-e29b-41d4-a716-446655440000")
+
+
+class CropRiskPredictionRequest(BaseModel):
+    district: str = Field(..., min_length=2, max_length=100)
+    crop: str = Field(..., min_length=2, max_length=100)
+    sowing_date: Optional[datetime] = None
+    soil_type: str = "loamy"
+    temperature: float = Field(..., ge=-10, le=60)
+    humidity: float = Field(..., ge=0, le=100)
+    rainfall: float = Field(..., ge=0, le=1000)
+    soil_ph: float = Field(..., ge=0, le=14)
+    latitude: Optional[float] = Field(None, ge=-90, le=90)
+    longitude: Optional[float] = Field(None, ge=-180, le=180)
+
+
+class CropRiskPredictionResponse(BaseModel):
+    risk_level: str
+    score: float
+    factors: List[Dict[str, Any]]
+    actions: List[str]
+    forecast: List[Dict[str, Any]]
+    weather: Dict[str, Any]
 
 
 class RiskWhyFactor(BaseModel):

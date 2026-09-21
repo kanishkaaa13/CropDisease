@@ -50,6 +50,15 @@ export interface ScanResponse {
   language?: string;
 }
 
+export interface CropRiskPrediction {
+  risk_level: string;
+  score: number;
+  factors: { name: string; value: number; detail: string }[];
+  actions: string[];
+  forecast: { day: string; date: string; predicted_risk_score: number; risk_level: string; temp_max: number; rain_mm: number }[];
+  weather: { temperature: number; humidity: number; precipitation: number; wind_speed: number; risk: number };
+}
+
 export interface RiskWhyFactor {
   factor: string;
   details: string;
@@ -110,6 +119,13 @@ export interface RAGAdvisoryResponse {
   disease_key?: string;
   crop_key?: string;
   language?: string;
+}
+
+export interface AssistantAskResponse {
+  answer: string;
+  language: string;
+  source: string;
+  spoken: boolean;
 }
 
 export interface OfficerDashboardStats {
@@ -270,8 +286,8 @@ export interface ChatPage {
 export const api = {
   health: () => apiFetch<HealthResponse>("/api/health"),
 
-  scanImage: (formData: FormData, language: string = "en") =>
-    fetch(`${BASE_URL}/api/scan?lang=${encodeURIComponent(language)}`, { method: "POST", body: formData }).then((r) => {
+  scanImage: (formData: FormData, language: string = "en", signal?: AbortSignal) =>
+    fetch(`${BASE_URL}/api/scan?lang=${encodeURIComponent(language)}`, { method: "POST", body: formData, signal }).then((r) => {
       if (!r.ok) throw new Error(`Scan failed: ${r.statusText}`);
       return r.json() as Promise<ScanResponse>;
     }),
@@ -291,6 +307,18 @@ export const api = {
         language_pref: languagePref,
       }),
     }),
+
+  askAssistant: (question: string, lang: string, context?: { disease_label?: string; crop_name?: string; severity_pct?: number }) =>
+    apiFetch<AssistantAskResponse>("/api/assistant/ask", {
+      method: "POST",
+      body: JSON.stringify({ question, lang, ...context }),
+    }),
+
+  getWeather: (lat: number, lon: number) =>
+    apiFetch<{ temperature: number; humidity: number; description: string; risk_level: string }>(`/api/farmer/weather?lat=${lat}&lon=${lon}`),
+
+  predictRisk: (payload: { district: string; crop: string; sowing_date?: string; soil_type: string; temperature: number; humidity: number; rainfall: number; soil_ph: number; latitude?: number; longitude?: number }) =>
+    apiFetch<CropRiskPrediction>("/api/predict/risk", { method: "POST", body: JSON.stringify(payload) }),
 
   getRAGAdvisory: (cropId: string, aiResultId: string) =>
     apiFetch<RAGAdvisoryResponse>("/api/advisory", {

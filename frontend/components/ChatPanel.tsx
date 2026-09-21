@@ -27,6 +27,7 @@ export default function ChatPanel({ userId, role, farmId, officerId = "officer-1
   const [connected, setConnected] = useState(false);
   const [busy, setBusy] = useState(false);
   const [correctedLabel, setCorrectedLabel] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -116,6 +117,9 @@ export default function ChatPanel({ userId, role, farmId, officerId = "officer-1
       const conversation = await api.createConversation(userId, { farm_id: farmId, officer_id: officerId, scan_id: scanId });
       setConversations((items) => [conversation, ...items.filter((item) => item.id !== conversation.id)]);
       setActive(conversation);
+      setError(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to start chat");
     } finally {
       setBusy(false);
     }
@@ -131,6 +135,9 @@ export default function ChatPanel({ userId, role, farmId, officerId = "officer-1
       setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]);
       setDraft("");
       setAttachment(null);
+      setError(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to send message");
     } finally {
       setBusy(false);
     }
@@ -185,6 +192,7 @@ export default function ChatPanel({ userId, role, farmId, officerId = "officer-1
               <div><h3 className="font-bold text-white">{role === "farmer" ? "Field Officer" : "Farmer Support"}</h3><p className="text-[11px] text-slate-500">{active.scan_label || diagnosis || (active.scan_id ? "Attached scan diagnosis" : "Agronomic support")}</p></div>
               <span className={`text-[10px] ${connected ? "text-emerald-400" : "text-amber-400"}`}>{connected ? "Live" : "Polling fallback"}</span>
             </header>
+            {error && <p className="px-4 py-2 text-xs text-red-300 bg-red-500/10 border-b border-red-500/20">{error}</p>}
             {active.scan_id && (active.scan_image_url || active.heat_map_url) && <div className="p-3 border-b border-white/10 flex gap-2">
               {active.scan_image_url && <img src={mediaUrl(active.scan_image_url)} alt="Original scan" className="h-20 w-20 rounded-lg object-cover" />}
               {active.heat_map_url && <img src={mediaUrl(active.heat_map_url)} alt="Grad-CAM heatmap" className="h-20 w-20 rounded-lg object-cover" />}

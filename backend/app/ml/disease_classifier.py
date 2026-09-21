@@ -43,6 +43,7 @@ class DiseaseProbability(TypedDict):
 # Standard weights location
 WEIGHTS_PATH = Path(__file__).parent / "weights" / "disease_classifier_efficientnet_b0.pth"
 ALT_WEIGHTS_PATH = Path(__file__).parent / "weights" / "disease_classifier.pth"
+RESULTS_WEIGHTS_PATH = Path(__file__).parent / "results" / "disease_classifier_efficientnet_b0.pth"
 
 # Default class mapping for fallback / scaffold mode
 DEFAULT_CLASSES = [
@@ -74,7 +75,10 @@ class DiseaseClassifier:
 
     def __init__(self, weights_path: Optional[Path] = None, use_dataset_classes: bool = True):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu") if _HAS_TORCH else "cpu"
-        self.weights_path = weights_path or (WEIGHTS_PATH if WEIGHTS_PATH.exists() else ALT_WEIGHTS_PATH)
+        self.weights_path = weights_path or next(
+            (path for path in (WEIGHTS_PATH, ALT_WEIGHTS_PATH, RESULTS_WEIGHTS_PATH) if path.exists()),
+            WEIGHTS_PATH,
+        )
         self.model = None
         self.temperature: float = 1.0
         self.classes: List[str] = DEFAULT_CLASSES

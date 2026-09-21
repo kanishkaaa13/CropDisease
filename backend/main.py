@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health, farmer, officer, admin, scan, risk, advisory, pest_trap, pipeline, chat
+from app.api import health, farmer, officer, admin, scan, risk, advisory, pest_trap, pipeline, chat, assistant
 from app.db.connection import engine, Base
 
 # Create all tables on startup (if database is reachable)
@@ -51,3 +51,4 @@ app.include_router(pest_trap.router, prefix="/api", tags=["Pest Trap"])
 app.include_router(pipeline.router, prefix="/api", tags=["Full Pipeline"])
 app.include_router(chat.router, prefix="/api", tags=["Farmer Officer Chat"])
 app.include_router(chat.ws_router, tags=["Farmer Officer Chat"])
+app.include_router(assistant.router, prefix="/api", tags=["Farmer Voice Assistant"])

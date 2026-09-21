@@ -6,6 +6,8 @@ import { detectBlur } from "@/lib/blurDetection";
 import FarmCard from "@/components/farmer/FarmCard";
 import { useI18n } from "@/lib/i18n";
 import ChatPanel from "@/components/ChatPanel";
+import VoiceAssistant, { speakText } from "@/components/VoiceAssistant";
+import type { VoiceIntent } from "@/lib/voiceIntents";
 
 type Screen = "home" | "scan" | "result" | "alerts";
 
@@ -18,6 +20,8 @@ interface Farm {
   lastScanDate: string | null;
   lastSeverityPct: number | null;
   needsFollowUp: boolean;
+  gpsLat?: number;
+  gpsLng?: number;
 }
 
 interface Alert {
@@ -49,6 +53,7 @@ export default function FarmerPage() {
   const [showGradCAM, setShowGradCAM] = useState(true);
   const [showWhy, setShowWhy] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [voiceMessage, setVoiceMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +85,8 @@ export default function FarmerPage() {
             lastScanDate: f.created_at ? f.created_at.slice(0, 10) : null,
             lastSeverityPct: null,
             needsFollowUp: false,
+            gpsLat: f.gps_lat,
+            gpsLng: f.gps_lng,
           })));
         } else {
           // If no farms registered yet in DB, default to empty state
@@ -106,6 +113,49 @@ export default function FarmerPage() {
     }
     loadData();
   }, [farmerId]);
+
+  useEffect(() => {
+    setSelectedLang(locale);
+  }, [locale]);
+
+  async function handleVoiceIntent(intent: VoiceIntent) {
+    if (intent === "scan_crop") {
+      if (selectedFarm) setScreen("scan");
+      else setVoiceMessage("Select a farm first, then say scan my crop.");
+    } else if (intent === "show_farms") {
+      setScreen("home");
+    } else if (intent === "talk_officer") {
+      if (selectedFarm || farms[0]) {
+        if (!selectedFarm) setSelectedFarm(farms[0]);
+        setShowChat(true);
+        if (scanResult) setScreen("result");
+      } else {
+        setVoiceMessage("Register a farm before contacting an officer.");
+      }
+    } else if (intent === "weather") {
+      const farm = selectedFarm || farms[0];
+      if (!farm) {
+        setVoiceMessage("Register a farm to hear its weather.");
+        return;
+      }
+      try {
+        const weather = await api.getWeather(farm.gpsLat ?? 19.9975, farm.gpsLng ?? 73.7898);
+        speakText(`${weather.description}. Temperature ${weather.temperature} degrees. Humidity ${weather.humidity} percent.`, locale, () => setVoiceMessage("No matching voice found; using the browser default voice."));
+      } catch {
+        setVoiceMessage("Weather is temporarily unavailable.");
+      }
+    }
+  }
+
+  const voiceAssistant = (
+    <VoiceAssistant
+      lastResultText={scanResult ? `${scanResult.localized_label || scanResult.label}. Severity ${scanResult.severity_pct} percent. ${advisory?.treatments.cultural?.[0] || "Please monitor the crop and contact an officer if symptoms worsen."}` : undefined}
+      diseaseLabel={scanResult?.label}
+      cropName={selectedFarm?.cropName}
+      severityPct={scanResult?.severity_pct}
+      onIntent={handleVoiceIntent}
+    />
+  );
 
 
   function handleScanCrop(farm: Farm) {
@@ -227,6 +277,8 @@ export default function FarmerPage() {
           lastScanDate: null,
           lastSeverityPct: null,
           needsFollowUp: false,
+          gpsLat: createdFarm.gps_lat,
+          gpsLng: createdFarm.gps_lng,
         },
       ]);
       setShowAddFarmModal(false);
@@ -272,6 +324,7 @@ export default function FarmerPage() {
   if (screen === "home") {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
+        {voiceAssistant}
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -387,6 +440,8 @@ export default function FarmerPage() {
         >
           🔔 View Past Reports & Alerts ({alerts.length})
         </button>
+        {showChat && farms[0] && <div className="mb-6"><ChatPanel userId={farmerId} role="farmer" farmId={farms[0].id} officerId="officer-1" onClose={() => setShowChat(false)} /></div>}
+        {voiceMessage && <p className="mb-4 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-200">{voiceMessage}</p>}
       </div>
     );
   }
@@ -396,6 +451,7 @@ export default function FarmerPage() {
   if (screen === "scan") {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
+        {voiceAssistant}
         <button onClick={goBack} className="mb-4 text-slate-400 text-sm hover:text-white flex items-center gap-1">
           ← Back
         </button>
@@ -469,6 +525,7 @@ export default function FarmerPage() {
   if (screen === "result" && scanResult) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
+        {voiceAssistant}
         <button onClick={goBack} className="mb-4 text-slate-400 text-sm hover:text-white flex items-center gap-1">
           ← Back to Farms
         </button>
@@ -522,6 +579,13 @@ export default function FarmerPage() {
               />
             )}
           </div>
+
+          <button
+            onClick={() => speakText(`${scanResult.localized_label || scanResult.label}. Severity ${scanResult.severity_pct} percent. ${advisory?.treatments.cultural?.[0] || "Please monitor the crop and contact an officer if symptoms worsen."}`, locale, () => setVoiceMessage("No Marathi voice found; using the browser default voice."))}
+            className="mb-4 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-bold text-sky-300 hover:bg-sky-500/20"
+          >
+            🔊 Read aloud
+          </button>
                 {scanResult.label.replace("___", " - ").replace("_", " ")}
               </h2>
               {scanResult.low_confidence && (
@@ -690,6 +754,7 @@ export default function FarmerPage() {
 
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
+        {voiceAssistant}
         <button onClick={() => setScreen("home")} className="mb-4 text-slate-400 text-sm hover:text-white flex items-center gap-1">
           ← Back
         </button>

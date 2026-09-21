@@ -6,11 +6,69 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Header
 from sqlalchemy.orm import Session
 
 from app.db.connection import get_db
-from app.models.schemas import RiskScoreRequest, RiskScoreResponse
+from app.models.schemas import RiskScoreRequest, RiskScoreResponse, CropRiskPredictionRequest, CropRiskPredictionResponse
 from app.services.risk_engine import evaluate_crop_risk_from_db
+from app.services.risk_engine import compute_crop_risk
+from app.services.weather import fetch_weather, engineer_weather_features, compute_weather_risk
+from datetime import datetime, timezone
 from app.i18n.catalog import get_locale_from_request, translate_risk_level
 
 router = APIRouter()
+
+
+def _prediction_actions(crop: str, soil_type: str, soil_ph: float, weather_risk: float) -> list[str]:
+    actions = [f"Inspect {crop} leaves twice this week and remove visibly infected material."]
+    if weather_risk >= 60:
+        actions.append("Improve field ventilation and avoid overhead irrigation while humidity is high.")
+    if soil_ph < 5.5 or soil_ph > 7.5:
+        actions.append(f"Test and correct the {soil_type} soil pH with local agronomy guidance.")
+    if weather_risk >= 40:
+        actions.append("Monitor after rainfall and follow only locally approved crop protection guidance.")
+    return actions[:4]
+
+
+@router.post("/predict/risk", response_model=CropRiskPredictionResponse, summary="Predict seven-day crop risk from weather and soil data")
+async def predict_crop_risk(payload: CropRiskPredictionRequest):
+    try:
+        latitude = payload.latitude if payload.latitude is not None else 19.9975
+        longitude = payload.longitude if payload.longitude is not None else 73.7898
+        snapshot = await fetch_weather(latitude, longitude)
+        features = engineer_weather_features(snapshot)
+        live_weather_risk = compute_weather_risk(features)
+        # The fusion engine combines disease, weather, local-case, and pest signals.
+        # Without a confirmed image or field history, neutral priors are used explicitly.
+        stage = "vegetative"
+        if payload.sowing_date:
+            age_days = max(0, (datetime.now(timezone.utc).date() - payload.sowing_date.date()).days)
+            stage = "sowing" if age_days < 21 else "flowering" if age_days < 75 else "fruiting" if age_days < 120 else "maturity"
+        result = compute_crop_risk(
+            disease_confidence=0.35,
+            temp_c=payload.temperature,
+            humidity_pct=payload.humidity,
+            rain_mm=payload.rainfall,
+            crop_stage=stage,
+            nearby_case_count=0,
+            days_since_rain=features["days_since_rain"],
+            forecast_days=[
+                {"day": f"Day {index + 1}", "date": item["date"], "temp_max": item["temp_max"], "humidity_pct": item["humidity_mean"], "rain_mm": item["precipitation_sum"]}
+                for index, item in enumerate((snapshot.forecast + snapshot.forecast[-1:] * 2)[:7])
+            ],
+        )
+        factors = [
+            {"name": "Weather pressure", "value": round(live_weather_risk, 1), "detail": f"{payload.temperature:.1f}°C, {payload.humidity:.0f}% humidity, {payload.rainfall:.1f} mm rainfall."},
+            {"name": "Soil condition", "value": round(max(0.0, 100.0 - abs(payload.soil_ph - 6.5) * 18), 1), "detail": f"{payload.soil_type.title()} soil at pH {payload.soil_ph:.1f}."},
+            {"name": "Crop stage", "value": round(result["overall_score"], 1), "detail": f"{crop_stage_label := stage.title()} stage vulnerability included in the fusion score."},
+        ]
+        return CropRiskPredictionResponse(
+            risk_level=result["risk_level"],
+            score=result["overall_score"],
+            factors=factors,
+            actions=_prediction_actions(payload.crop, payload.soil_type, payload.soil_ph, live_weather_risk),
+            forecast=result["forecast"],
+            weather={"temperature": snapshot.temperature, "humidity": snapshot.humidity, "precipitation": snapshot.precipitation, "wind_speed": snapshot.wind_speed, "risk": round(live_weather_risk, 1)},
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Risk prediction unavailable: {exc}") from exc
 
 
 @router.post(

@@ -1,0 +1,442 @@
+{
+  "dataset": "nirmalsankalana/crop-pest-and-disease-detection",
+  "architecture": "efficientnet_b0",
+  "trained": true,
+  "img_size": 224,
+  "seed": 42,
+  "total_test_samples": 2439,
+  "overall_accuracy": 0.934809,
+  "top3_accuracy": 0.99098,
+  "temperature": 0.948879,
+  "best_val_loss": 0.638177,
+  "top10_most_confused_pairs": [
+    {
+      "true_class": "Cassava bacterial blight",
+      "predicted_class": "Cassava brown spot",
+      "count": 13
+    },
+    {
+      "true_class": "Maize leaf blight",
+      "predicted_class": "Maize leaf spot",
+      "count": 13
+    },
+    {
+      "true_class": "Tomato leaf blight",
+      "predicted_class": "Tomato septoria leaf spot",
+      "count": 11
+    },
+    {
+      "true_class": "Tomato septoria leaf spot",
+      "predicted_class": "Tomato leaf curl",
+      "count": 11
+    },
+    {
+      "true_class": "Tomato septoria leaf spot",
+      "predicted_class": "Tomato leaf blight",
+      "count": 10
+    },
+    {
+      "true_class": "Maize leaf spot",
+      "predicted_class": "Maize leaf blight",
+      "count": 9
+    },
+    {
+      "true_class": "Tomato septoria leaf spot",
+      "predicted_class": "Tomato verticulium wilt",
+      "count": 8
+    },
+    {
+      "true_class": "Tomato verticulium wilt",
+      "predicted_class": "Tomato septoria leaf spot",
+      "count": 7
+    },
+    {
+      "true_class": "Cashew anthracnose",
+      "predicted_class": "Cashew leaf miner",
+      "count": 5
+    },
+    {
+      "true_class": "Cassava brown spot",
+      "predicted_class": "Cassava bacterial blight",
+      "count": 5
+    }
+  ],
+  "low_recall_classes_under_70": [],
+  "per_class_report": {
+    "Cashew anthracnose": {
+      "precision": 0.9704142011834319,
+      "recall": 0.9371428571428572,
+      "f1-score": 0.9534883720930233,
+      "support": 175.0
+    },
+    "Cashew gumosis": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 39.0
+    },
+    "Cashew healthy": {
+      "precision": 0.9716312056737588,
+      "recall": 1.0,
+      "f1-score": 0.9856115107913669,
+      "support": 137.0
+    },
+    "Cashew leaf miner": {
+      "precision": 0.9637681159420289,
+      "recall": 0.9568345323741008,
+      "f1-score": 0.9602888086642599,
+      "support": 139.0
+    },
+    "Cashew red rust": {
+      "precision": 0.9824561403508771,
+      "recall": 1.0,
+      "f1-score": 0.9911504424778761,
+      "support": 168.0
+    },
+    "Cassava bacterial blight": {
+      "precision": 0.9722222222222222,
+      "recall": 0.9386973180076629,
+      "f1-score": 0.9551656920077972,
+      "support": 261.0
+    },
+    "Cassava brown spot": {
+      "precision": 0.9161290322580645,
+      "recall": 0.9659863945578231,
+      "f1-score": 0.9403973509933775,
+      "support": 147.0
+    },
+    "Cassava green mite": {
+      "precision": 0.98989898989899,
+      "recall": 0.9607843137254902,
+      "f1-score": 0.9751243781094527,
+      "support": 102.0
+    },
+    "Cassava healthy": {
+      "precision": 0.9669421487603306,
+      "recall": 0.9831932773109243,
+      "f1-score": 0.975,
+      "support": 119.0
+    },
+    "Cassava mosaic": {
+      "precision": 0.9736842105263158,
+      "recall": 1.0,
+      "f1-score": 0.9866666666666667,
+      "support": 111.0
+    },
+    "Maize fall armyworm": {
+      "precision": 0.8235294117647058,
+      "recall": 1.0,
+      "f1-score": 0.9032258064516129,
+      "support": 28.0
+    },
+    "Maize grasshoper": {
+      "precision": 1.0,
+      "recall": 0.9850746268656716,
+      "f1-score": 0.9924812030075187,
+      "support": 67.0
+    },
+    "Maize healthy": {
+      "precision": 0.8181818181818182,
+      "recall": 0.8571428571428571,
+      "f1-score": 0.8372093023255814,
+      "support": 21.0
+    },
+    "Maize leaf beetle": {
+      "precision": 0.9891304347826086,
+      "recall": 0.9680851063829787,
+      "f1-score": 0.978494623655914,
+      "support": 94.0
+    },
+    "Maize leaf blight": {
+      "precision": 0.8936170212765957,
+      "recall": 0.84,
+      "f1-score": 0.865979381443299,
+      "support": 100.0
+    },
+    "Maize leaf spot": {
+      "precision": 0.7981651376146789,
+      "recall": 0.8285714285714286,
+      "f1-score": 0.8130841121495327,
+      "support": 105.0
+    },
+    "Maize streak virus": {
+      "precision": 0.9444444444444444,
+      "recall": 0.9340659340659341,
+      "f1-score": 0.9392265193370166,
+      "support": 91.0
+    },
+    "Tomato healthy": {
+      "precision": 0.9583333333333334,
+      "recall": 1.0,
+      "f1-score": 0.9787234042553191,
+      "support": 46.0
+    },
+    "Tomato leaf blight": {
+      "precision": 0.8870967741935484,
+      "recall": 0.8461538461538461,
+      "f1-score": 0.8661417322834646,
+      "support": 130.0
+    },
+    "Tomato leaf curl": {
+      "precision": 0.7213114754098361,
+      "recall": 0.8461538461538461,
+      "f1-score": 0.7787610619469026,
+      "support": 52.0
+    },
+    "Tomato septoria leaf spot": {
+      "precision": 0.9054054054054054,
+      "recall": 0.8739130434782608,
+      "f1-score": 0.8893805309734514,
+      "support": 230.0
+    },
+    "Tomato verticulium wilt": {
+      "precision": 0.8461538461538461,
+      "recall": 0.8571428571428571,
+      "f1-score": 0.8516129032258064,
+      "support": 77.0
+    },
+    "accuracy": 0.9348093480934809,
+    "macro avg": {
+      "precision": 0.922387062244402,
+      "recall": 0.93540646541257,
+      "f1-score": 0.928055172857238,
+      "support": 2439.0
+    },
+    "weighted avg": {
+      "precision": 0.9360933483235602,
+      "recall": 0.9348093480934809,
+      "f1-score": 0.934998701366541,
+      "support": 2439.0
+    }
+  },
+  "training_history": {
+    "phase_a": [
+      {
+        "phase": "A",
+        "epoch": 1,
+        "train_loss": 1.8192193127776448,
+        "train_acc": 0.5472861842105263,
+        "val_loss": 1.189833286308079,
+        "val_acc": 0.7236572365723657
+      },
+      {
+        "phase": "A",
+        "epoch": 2,
+        "train_loss": 1.4199049719854404,
+        "train_acc": 0.6387746710526315,
+        "val_loss": 1.1154608030014226,
+        "val_acc": 0.7486674866748667
+      },
+      {
+        "phase": "A",
+        "epoch": 3,
+        "train_loss": 1.3759842126777297,
+        "train_acc": 0.6533203125,
+        "val_loss": 1.0793772206144188,
+        "val_acc": 0.7617876178761788
+      }
+    ],
+    "phase_b": [
+      {
+        "phase": "B",
+        "epoch": 1,
+        "train_loss": 1.0898211641531241,
+        "train_acc": 0.7554481907894737,
+        "val_loss": 0.8595680433396875,
+        "val_acc": 0.8323083230832309,
+        "lr": 0.00029815940691897306,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 2,
+        "train_loss": 0.9178394128225351,
+        "train_acc": 0.8196443256578947,
+        "val_loss": 0.8096568145288606,
+        "val_acc": 0.8585485854858549,
+        "lr": 0.0002926829491861254,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 3,
+        "train_loss": 0.8480365990023864,
+        "train_acc": 0.8433902138157895,
+        "val_loss": 0.7629977265871564,
+        "val_acc": 0.8798687986879868,
+        "lr": 0.00028370547536616097,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 4,
+        "train_loss": 0.8075259857271847,
+        "train_acc": 0.8600431743421053,
+        "val_loss": 0.7348147958651484,
+        "val_acc": 0.8843788437884379,
+        "lr": 0.00027144804065905466,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 5,
+        "train_loss": 0.7762307852114502,
+        "train_acc": 0.87109375,
+        "val_loss": 0.7282437416264737,
+        "val_acc": 0.8942189421894219,
+        "lr": 0.0002562124637873889,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 6,
+        "train_loss": 0.7481554248615315,
+        "train_acc": 0.8832236842105263,
+        "val_loss": 0.7027291859721199,
+        "val_acc": 0.9040590405904059,
+        "lr": 0.00023837389521772474,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 7,
+        "train_loss": 0.7254100928181096,
+        "train_acc": 0.8925267269736842,
+        "val_loss": 0.7135319392815043,
+        "val_acc": 0.9044690446904469,
+        "lr": 0.00021837157971106225,
+        "improved": false
+      },
+      {
+        "phase": "B",
+        "epoch": 8,
+        "train_loss": 0.7030647063725873,
+        "train_acc": 0.9000822368421053,
+        "val_loss": 0.690573314532436,
+        "val_acc": 0.9102091020910209,
+        "lr": 0.00019669804065905466,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 9,
+        "train_loss": 0.6858699253123057,
+        "train_acc": 0.91015625,
+        "val_loss": 0.685170097984511,
+        "val_acc": 0.8995489954899549,
+        "lr": 0.00017388695252351454,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 10,
+        "train_loss": 0.664835105699144,
+        "train_acc": 0.9192537006578947,
+        "val_loss": 0.6767435102200792,
+        "val_acc": 0.9196391963919639,
+        "lr": 0.0001505,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 11,
+        "train_loss": 0.6509846937107412,
+        "train_acc": 0.9238795230263158,
+        "val_loss": 0.6676805916747484,
+        "val_acc": 0.915129151291513,
+        "lr": 0.0001271130474764855,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 12,
+        "train_loss": 0.636839248436062,
+        "train_acc": 0.9305098684210527,
+        "val_loss": 0.6745526441642132,
+        "val_acc": 0.9184091840918409,
+        "lr": 0.00010430195934094536,
+        "improved": false
+      },
+      {
+        "phase": "B",
+        "epoch": 13,
+        "train_loss": 0.6253925508966571,
+        "train_acc": 0.933850740131579,
+        "val_loss": 0.6582637237520089,
+        "val_acc": 0.9282492824928249,
+        "lr": 8.262842028893775e-05,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 14,
+        "train_loss": 0.6084564987962183,
+        "train_acc": 0.9424856085526315,
+        "val_loss": 0.6453906900084082,
+        "val_acc": 0.9286592865928659,
+        "lr": 6.262610478227527e-05,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 15,
+        "train_loss": 0.6018224835984016,
+        "train_acc": 0.9461348684210527,
+        "val_loss": 0.6432128451847062,
+        "val_acc": 0.9348093480934809,
+        "lr": 4.478753621261114e-05,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 16,
+        "train_loss": 0.5955968266843181,
+        "train_acc": 0.9485505756578947,
+        "val_loss": 0.6416219377087589,
+        "val_acc": 0.9339893398933989,
+        "lr": 2.9551959340945366e-05,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 17,
+        "train_loss": 0.5861080747685934,
+        "train_acc": 0.9517372532894737,
+        "val_loss": 0.6391967535385493,
+        "val_acc": 0.9376793767937679,
+        "lr": 1.7294524633839014e-05,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 18,
+        "train_loss": 0.5837319343301811,
+        "train_acc": 0.953381990131579,
+        "val_loss": 0.6387519652406521,
+        "val_acc": 0.932759327593276,
+        "lr": 8.317050813874547e-06,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 19,
+        "train_loss": 0.581169565649409,
+        "train_acc": 0.9545127467105263,
+        "val_loss": 0.6381765176473753,
+        "val_acc": 0.933579335793358,
+        "lr": 2.84059308102692e-06,
+        "improved": true
+      },
+      {
+        "phase": "B",
+        "epoch": 20,
+        "train_loss": 0.581306571925157,
+        "train_acc": 0.9544099506578947,
+        "val_loss": 0.6397166717682964,
+        "val_acc": 0.9364493644936449,
+        "lr": 1e-06,
+        "improved": false
+      }
+    ]
+  }
+}
