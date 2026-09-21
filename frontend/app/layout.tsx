@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
 import { I18nProvider } from "@/lib/i18n";
+import { AuthProvider } from "@/lib/auth-context";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import Sidebar from "@/components/Sidebar";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,12 +19,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={inter.className}>
-        <I18nProvider>
-          <Navbar />
-          <main className="min-h-screen bg-gradient-to-br from-green-950 via-slate-900 to-emerald-950">
-            {children}
-          </main>
-        </I18nProvider>
+        <AuthProvider>
+          <I18nProvider>
+            <ProtectedRoute>
+              <div className="flex min-h-screen bg-neutral-50">
+                <Sidebar />
+                <main className="flex-1 lg:ml-0 transition-all duration-300">
+                  <div className="max-w-7xl mx-auto px-6 py-8">
+                    {children}
+                  </div>
+                </main>
+              </div>
+            </ProtectedRoute>
+          </I18nProvider>
+        </AuthProvider>
       </body>
     </html>
   );

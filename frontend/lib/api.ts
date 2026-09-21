@@ -9,13 +9,28 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 12000);
+  
+  // Add auth token if available
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  const headers: HeadersInit = { "Content-Type": "application/json", ...options?.headers };
+  if (token) {
+    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+  }
+  
   try {
     const res = await fetch(url, {
-      headers: { "Content-Type": "application/json", ...options?.headers },
+      headers,
       ...options,
       signal: options?.signal ?? controller.signal,
     });
     if (!res.ok) {
+      // Handle 401 - clear session and redirect to login
+      if (res.status === 401 && typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        window.location.href = '/login';
+        throw new Error('Session expired');
+      }
       const text = await res.text();
       throw new Error(`API error ${res.status}: ${text}`);
     }
@@ -306,6 +321,40 @@ export interface ChatPage {
   limit: number;
 }
 
+// ─── Auth Types ───────────────────────────────────────────────────────────────
+
+export interface User {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  role: "farmer" | "officer" | "admin";
+  district: string | null;
+  preferred_language: string;
+  created_at: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+
+export interface RegisterRequest {
+  full_name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  role: "farmer" | "officer";
+  district?: string;
+  preferred_language: string;
+}
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
 // ─── Endpoints ────────────────────────────────────────────────────────────────
 
 export const api = {
@@ -453,5 +502,51 @@ export const api = {
     url.searchParams.set("user_id", userId);
     return url.toString();
   },
+
+  // Auth endpoints
+  register: (data: RegisterRequest) => {
+    const formData = new URLSearchParams();
+    formData.append("full_name", data.full_name);
+    formData.append("email", data.email);
+    formData.append("password", data.password);
+    if (data.phone) formData.append("phone", data.phone);
+    formData.append("role", data.role);
+    if (data.district) formData.append("district", data.district);
+    formData.append("preferred_language", data.preferred_language);
+    
+    return fetch(`${BASE_URL}/api/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then(async (r) => {
+      if (!r.ok) {
+        const text = await r.text();
+        throw new Error(text || "Registration failed");
+      }
+      return r.json() as Promise<AuthResponse>;
+    });
+  },
+
+  login: (data: LoginRequest) => {
+    const formData = new URLSearchParams();
+    formData.append("username", data.username);
+    formData.append("password", data.password);
+    
+    return fetch(`${BASE_URL}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formData,
+    }).then(async (r) => {
+      if (!r.ok) {
+        const text = await r.text();
+        throw new Error(text || "Login failed");
+      }
+      return r.json() as Promise<AuthResponse>;
+    });
+  },
+
+  getMe: () => apiFetch<User>("/api/auth/me"),
+
+  logout: () => apiFetch<{ message: string }>("/api/auth/logout", { method: "POST" }),
 };
 
