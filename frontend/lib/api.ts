@@ -7,15 +7,27 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
-  const res = await fetch(url, {
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    ...options,
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`API error ${res.status}: ${text}`);
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 12000);
+  try {
+    const res = await fetch(url, {
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      ...options,
+      signal: options?.signal ?? controller.signal,
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`API error ${res.status}: ${text}`);
+    }
+    return res.json() as Promise<T>;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("The backend request timed out. Check that the API is running and try again.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
   }
-  return res.json() as Promise<T>;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────

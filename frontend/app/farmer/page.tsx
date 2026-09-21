@@ -8,6 +8,7 @@ import { useI18n } from "@/lib/i18n";
 import ChatPanel from "@/components/ChatPanel";
 import VoiceAssistant, { speakText } from "@/components/VoiceAssistant";
 import type { VoiceIntent } from "@/lib/voiceIntents";
+import GovResourceLinks from "@/components/GovResourceLinks";
 
 type Screen = "home" | "scan" | "result" | "alerts";
 
@@ -41,7 +42,7 @@ const LANGUAGES = [
 ];
 
 export default function FarmerPage() {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const [screen, setScreen] = useState<Screen>("home");
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
   const [selectedLang, setSelectedLang] = useState<string>(locale);
@@ -328,32 +329,32 @@ export default function FarmerPage() {
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              🌱 My Farms
+              🌱 {t("farmer.my_farms")}
             </h1>
-            <p className="text-slate-400 text-sm mt-1">Select a farm to scan for diseases</p>
+            <p className="text-slate-400 text-sm mt-1">{t("farmer.select_farm")}</p>
           </div>
           <button
             onClick={() => setShowAddFarmModal(true)}
             className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-lg"
           >
-            + Add Farm
+            {t("farmer.add_farm")}
           </button>
         </div>
 
         {fetchingData ? (
-          <div className="text-center py-12 text-slate-400">Loading farms from server...</div>
+          <div className="text-center py-12 text-slate-400">{t("farmer.loading_farms")}</div>
         ) : farms.length === 0 ? (
           <div className="glass p-8 rounded-2xl text-center max-w-md mx-auto my-8 border border-white/10">
             <div className="text-5xl mb-4">🌾</div>
-            <h3 className="text-lg font-bold text-white mb-2">No farms registered yet</h3>
+            <h3 className="text-lg font-bold text-white mb-2">{t("farmer.no_farms")}</h3>
             <p className="text-sm text-slate-400 mb-6">
-              Register your first farm plot to start monitoring crop health and scanning leaves for disease.
+              {t("farmer.register_hint")}
             </p>
             <button
               onClick={() => setShowAddFarmModal(true)}
               className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm transition-all"
             >
-              + Register New Farm
+              {t("farmer.register_farm")}
             </button>
           </div>
         ) : (
@@ -438,8 +439,11 @@ export default function FarmerPage() {
           onClick={() => setScreen("alerts")}
           className="mt-6 w-full py-3 glass border border-white/10 text-slate-300 rounded-xl text-sm font-semibold hover:bg-white/5 transition-all"
         >
-          🔔 View Past Reports & Alerts ({alerts.length})
+          {t("farmer.alerts")} ({alerts.length})
         </button>
+        <div className="mt-6">
+          <GovResourceLinks />
+        </div>
         {showChat && farms[0] && <div className="mb-6"><ChatPanel userId={farmerId} role="farmer" farmId={farms[0].id} officerId="officer-1" onClose={() => setShowChat(false)} /></div>}
         {voiceMessage && <p className="mb-4 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-200">{voiceMessage}</p>}
       </div>

@@ -4,8 +4,11 @@ import { useEffect, useState, useCallback } from "react";
 import { api, type AdminSummary, type DistrictAnalytics, type Outbreak, type RiskTrendData } from "@/lib/api";
 import OfficerMap from "@/components/OfficerMap";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import GovResourceLinks from "@/components/GovResourceLinks";
+import { useTranslations } from "@/lib/i18n";
 
 export default function AdminPage() {
+  const t = useTranslations();
   const [summary, setSummary] = useState<AdminSummary | null>(null);
   const [districtData, setDistrictData] = useState<DistrictAnalytics[]>([]);
   const [outbreaks, setOutbreaks] = useState<Outbreak[]>([]);
@@ -61,15 +64,15 @@ export default function AdminPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            🏛️ Government Command Center
+            {t("admin.title")}
           </h1>
-          <p className="text-slate-400 text-sm mt-1">Maharashtra State Disease Surveillance Dashboard</p>
+          <p className="text-slate-400 text-sm mt-1">{t("admin.subtitle")}</p>
         </div>
         <button
           onClick={loadData}
           className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 rounded-lg text-xs font-semibold transition-all"
         >
-          🔄 Refresh
+          {t("admin.refresh")}
         </button>
       </div>
 
@@ -78,6 +81,10 @@ export default function AdminPage() {
           ⚠️ {error}
         </div>
       )}
+
+      <div className="mb-6 max-w-sm">
+        <GovResourceLinks compact />
+      </div>
 
       {loading ? (
         <div className="grid grid-cols-5 gap-4 mb-6">

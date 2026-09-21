@@ -8,8 +8,11 @@ import {
 } from "@/lib/api";
 import OfficerMap from "@/components/OfficerMap";
 import ChatPanel from "@/components/ChatPanel";
+import GovResourceLinks from "@/components/GovResourceLinks";
+import { useTranslations } from "@/lib/i18n";
 
 export default function OfficerPage() {
+  const t = useTranslations();
   const [stats, setStats] = useState<OfficerDashboardStats | null>(null);
   const [queueItems, setQueueItems] = useState<OfficerQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +86,7 @@ export default function OfficerPage() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
           </svg>
-          Loading District Agronomic Dashboard...
+          {t("officer.loading")}
         </div>
       </div>
     );
@@ -95,10 +98,10 @@ export default function OfficerPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-black text-white tracking-tight">
-            📊 Field Officer Command Dashboard
+            {t("officer.title")}
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Geospatial risk hotspots, prioritized validation queue, and expert review workflow.
+            {t("officer.subtitle")}
           </p>
         </div>
 
@@ -118,13 +121,13 @@ export default function OfficerPage() {
             onClick={loadData}
             className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 rounded-xl text-xs font-bold transition-all"
           >
-            🔄 Refresh
+            {t("officer.refresh")}
           </button>
           <button
             onClick={() => setShowChat((open) => !open)}
             className="px-4 py-2 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-300 rounded-xl text-xs font-bold transition-all"
           >
-            💬 Chat Inbox
+            {t("officer.chat")}
           </button>
         </div>
       </div>
@@ -134,6 +137,10 @@ export default function OfficerPage() {
           <ChatPanel userId="officer-1" role="officer" initialScanId={chatScanId} onClose={() => setShowChat(false)} />
         </div>
       )}
+
+      <div className="mb-6 max-w-sm">
+        <GovResourceLinks compact />
+      </div>
 
       {error && (
         <div className="bg-red-500/20 border border-red-500/30 rounded-xl px-4 py-3 text-red-300 text-xs mb-6">

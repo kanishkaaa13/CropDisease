@@ -28,5 +28,34 @@
     "moderate": "Moderate",
     "high": "High",
     "critical": "Critical"
+  },
+  "resources": {
+    "eyebrow": "Official support",
+    "title": "Government Resources",
+    "quick_links": "Quick Links",
+    "open": "Open",
+    "external": "opens external site"
+  },
+  "farmer": {
+    "my_farms": "My Farms",
+    "select_farm": "Select a farm to scan for diseases",
+    "add_farm": "+ Add Farm",
+    "loading_farms": "Loading farms from server...",
+    "no_farms": "No farms registered yet",
+    "register_hint": "Register your first farm plot to start monitoring crop health and scanning leaves for disease.",
+    "register_farm": "+ Register New Farm",
+    "alerts": "🔔 View Past Reports & Alerts"
+  },
+  "officer": {
+    "loading": "Loading District Agronomic Dashboard...",
+    "title": "📊 Field Officer Command Dashboard",
+    "subtitle": "Geospatial risk hotspots, prioritized validation queue, and expert review workflow.",
+    "refresh": "🔄 Refresh",
+    "chat": "💬 Chat Inbox"
+  },
+  "admin": {
+    "title": "🏛️ Government Command Center",
+    "subtitle": "Maharashtra State Disease Surveillance Dashboard",
+    "refresh": "🔄 Refresh"
   }
 }
