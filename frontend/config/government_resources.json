@@ -1,0 +1,32 @@
+{
+  "resources": [
+    {
+      "id": "pm-fasal-bima",
+      "category": "schemes",
+      "nameKey": "resources.items.pm_fasal_bima.name",
+      "descriptionKey": "resources.items.pm_fasal_bima.description",
+      "scope": "central",
+      "url": "https://pmfby.gov.in/",
+      "status": "active"
+    },
+    {
+      "id": "maharashtra-krishi",
+      "category": "schemes",
+      "nameKey": "resources.items.maharashtra_krishi.name",
+      "descriptionKey": "resources.items.maharashtra_krishi.description",
+      "scope": "state",
+      "url": "https://krishi.maharashtra.gov.in/",
+      "status": "active"
+    },
+    {
+      "id": "kisan-call-centre",
+      "category": "helpline",
+      "nameKey": "resources.items.kisan_call_centre.name",
+      "descriptionKey": "resources.items.kisan_call_centre.description",
+      "scope": "central",
+      "phone": "18001801551",
+      "url": "https://agriwelfare.gov.in/en/KisanCallCentre",
+      "status": "active"
+    }
+  ]
+}

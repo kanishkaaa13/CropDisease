@@ -1,21 +1,17 @@
+import resourceData from "./government_resources.json";
+
+export type ResourceCategory = "helpline" | "schemes" | string;
+export type ResourceScope = "state" | "central";
+
 export interface GovResource {
-  title: string;
-  description: string;
+  id: string;
+  category: ResourceCategory;
+  nameKey: string;
+  descriptionKey: string;
+  scope: ResourceScope;
   url: string;
-  icon: string;
+  phone?: string;
+  status: string;
 }
 
-export const GOV_RESOURCES: GovResource[] = [
-  {
-    title: "PM Fasal Bima Yojana (Crop Insurance)",
-    description: "Apply for crop insurance and check claim status",
-    url: "https://pmfby.gov.in/",
-    icon: "🛡️",
-  },
-  {
-    title: "Maharashtra Krishi Department",
-    description: "State agriculture schemes, subsidies, and advisories",
-    url: "https://krishi.maharashtra.gov.in/",
-    icon: "🏛️",
-  },
-];
+export const GOV_RESOURCES = resourceData.resources as GovResource[];

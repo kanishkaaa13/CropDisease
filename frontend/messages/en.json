@@ -34,7 +34,18 @@
     "title": "Government Resources",
     "quick_links": "Quick Links",
     "open": "Open",
-    "external": "opens external site"
+    "external": "opens external site",
+    "all": "All",
+    "filter_label": "Filter government resources",
+    "empty": "No government resources are available.",
+    "no_matching": "No resources match this category.",
+    "categories": { "schemes": "Schemes", "helpline": "Helplines" },
+    "scope": { "state": "State", "central": "Central" },
+    "items": {
+      "pm_fasal_bima": { "name": "PM Fasal Bima Yojana (Crop Insurance)", "description": "Apply for crop insurance and check claim status" },
+      "maharashtra_krishi": { "name": "Maharashtra Krishi Department", "description": "State agriculture schemes, subsidies, and advisories" },
+      "kisan_call_centre": { "name": "Kisan Call Centre", "description": "Get agricultural advice from government experts" }
+    }
   },
   "farmer": {
     "my_farms": "My Farms",
