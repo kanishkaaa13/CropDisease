@@ -10,12 +10,17 @@ from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 from app.db.connection import get_db
-from app.db.models import User
+from app.db.models import User, Crop
 from app.models.schemas import OfficerDashboardStats, ExpertValidationRequest, ExpertValidationResponse
 from app.services.risk_engine import compute_district_risk
+from app.services.officer_map import get_map_data, risk_level_from_score
 from app.core.dependencies import get_current_user, require_officer
 
 router = APIRouter()
+
+
+def _score_to_risk_level(risk_score: float) -> str:
+    return risk_level_from_score(risk_score)
 
 
 @router.get("/dashboard", response_model=OfficerDashboardStats, summary="Officer dashboard statistics")
@@ -131,11 +136,46 @@ def list_pending_validations(
         )
 
 
+@router.get("/map-data", summary="Officer map points and district aggregates")
+def officer_map_data(
+    crop: Optional[str] = None,
+    disease: Optional[str] = None,
+    risk: Optional[str] = None,
+    days: int = 30,
+    officer_lat: Optional[float] = 19.7,
+    officer_lng: Optional[float] = 75.7,
+    current_user: User = Depends(require_officer),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns observation map points and per-district aggregates for the officer risk map.
+    Supports crop, disease, risk level, and date-range filters.
+    """
+    try:
+        district_scope = current_user.district if current_user.district else None
+        return get_map_data(
+            db,
+            crop=crop,
+            disease=disease,
+            risk=risk,
+            days=days,
+            officer_lat=officer_lat or 19.7,
+            officer_lng=officer_lng or 75.7,
+            district_scope=district_scope,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching officer map data: {str(exc)}",
+        )
+
+
 @router.get("/hotspots", summary="Geospatial risk hotspots clustered by village/taluka/district")
 def get_risk_hotspots(
     state: str = "Maharashtra",
     cluster_radius_km: float = 10.0,
-    db: Session = Depends(get_db)
+    current_user: User = Depends(require_officer),
+    db: Session = Depends(get_db),
 ):
     """
     Returns aggregated risk data grouped by spatial clusters using PostGIS.
@@ -221,14 +261,7 @@ def get_risk_hotspots(
             hotspots = []
             for row in results:
                 risk_score = float(row.avg_risk_score) if row.avg_risk_score else 0.0
-                if risk_score >= 40:
-                    risk_level = "MODERATE"
-                elif risk_score >= 60:
-                    risk_level = "HIGH"
-                elif risk_score >= 80:
-                    risk_level = "CRITICAL"
-                else:
-                    risk_level = "LOW"
+                risk_level = _score_to_risk_level(risk_score)
 
                 hotspots.append({
                     "cluster_id": row.cluster_id,
@@ -283,14 +316,7 @@ def get_risk_hotspots(
                     avg_risk = 0.0
 
                 risk_score = float(avg_risk) if avg_risk else 0.0
-                if risk_score >= 40:
-                    risk_level = "MODERATE"
-                elif risk_score >= 60:
-                    risk_level = "HIGH"
-                elif risk_score >= 80:
-                    risk_level = "CRITICAL"
-                else:
-                    risk_level = "LOW"
+                risk_level = _score_to_risk_level(risk_score)
 
                 # Get dominant disease
                 dom_disease = db.query(AIResult.disease_label).join(
