@@ -4,7 +4,6 @@ import "./globals.css";
 import { I18nProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth-context";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Sidebar from "@/components/Sidebar";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,14 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <I18nProvider>
             <ProtectedRoute>
-              <div className="flex min-h-screen bg-neutral-50">
-                <Sidebar />
-                <main className="flex-1 lg:ml-0 transition-all duration-300">
-                  <div className="max-w-7xl mx-auto px-6 py-8">
-                    {children}
-                  </div>
-                </main>
-              </div>
+              {children}
             </ProtectedRoute>
           </I18nProvider>
         </AuthProvider>

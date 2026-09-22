@@ -18,6 +18,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from passlib.context import CryptContext
 
 from app.config import settings
 from app.db.base import Base
@@ -67,6 +68,8 @@ SAMPLE_IMAGES = [
     "https://images.unsplash.com/photo-1595855759920-86582396756a?q=80&w=600",
 ]
 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 def seed_database(db_url: str | None = None):
     """Execute the full database seed process."""
@@ -85,6 +88,7 @@ def seed_database(db_url: str | None = None):
             loc = MAHARASHTRA_LOCATIONS[(i - 1) % len(MAHARASHTRA_LOCATIONS)]
             farmer = User(
                 name=f"Farmer {i} (Ramesh {['Patil', 'Deshmukh', 'Pawar', 'Kulkarni', 'Jadhav', 'Shinde', 'Chavan', 'Gaikwad', 'More', 'Kadam'][i-1]})",
+                password_hash=pwd_context.hash("changeme123"),
                 phone=f"+9198220{i:05d}",
                 email=f"farmer{i}@krushirakshak.in",
                 role=UserRole.farmer,
@@ -101,6 +105,7 @@ def seed_database(db_url: str | None = None):
         for i in range(1, 4):
             officer = User(
                 name=f"Officer {i} (Dr. Anita {['Joshi', 'Bhosale', 'Sutar'][i-1]})",
+                password_hash=pwd_context.hash("changeme123"),
                 phone=f"+9198900{i:05d}",
                 email=f"officer{i}@agri.maharashtra.gov.in",
                 role=UserRole.officer,
@@ -113,6 +118,7 @@ def seed_database(db_url: str | None = None):
 
         admin = User(
             name="Admin Director General",
+            password_hash=pwd_context.hash("changeme123"),
             phone="+919000000001",
             email="admin@krushirakshak.gov.in",
             role=UserRole.admin,

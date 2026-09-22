@@ -55,5 +55,9 @@ KrushiRakshak/
 | Backend    | FastAPI + SQLAlchemy + PostgreSQL |
 | Frontend   | Next.js 14 App Router + TypeScript + Tailwind CSS |
 | ML         | PyTorch (ResNet50) + scikit-learn + XGBoost |
-| Maps       | MapLibre GL (scaffolded, ready to wire up) |
+| Maps       | React Leaflet + OpenStreetMap |
 | DevOps     | Docker Compose |
+
+### Maharashtra district boundaries
+
+The officer risk map uses Maharashtra district boundaries derived from the public India district GeoJSON dataset by geohacker: https://github.com/geohacker/india/blob/master/district/india_district.geojson. The source is filtered to Maharashtra districts and retained under `frontend/public/geo/maharashtra_districts.geojson`. Use of the source data should follow its repository licensing and attribution terms.

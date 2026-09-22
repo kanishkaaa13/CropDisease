@@ -4,6 +4,7 @@
  */
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export const SESSION_EXPIRED_EVENT = "krushirakshak:session-expired";
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
@@ -28,6 +29,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
       if (res.status === 401 && typeof window !== 'undefined') {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
+        window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
         window.location.href = '/login';
         throw new Error('Session expired');
       }
@@ -236,6 +238,44 @@ export interface OfficerQueueItem {
   timestamp: string;
 }
 
+export interface OfficerMapPoint {
+  id: string;
+  ai_result_id: string;
+  observation_id: string;
+  lat: number;
+  lng: number;
+  risk: "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
+  risk_score: number;
+  disease: string;
+  crop: string;
+  confidence: number;
+  farm_name: string;
+  farm_id: string;
+  district: string;
+  taluka: string;
+  date: string;
+  distance_km: number;
+}
+
+export interface OfficerMapDistrict {
+  district: string;
+  total: number;
+  dominant_disease: string;
+  dominant_crop: string;
+  max_risk: "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
+  avg_risk_score: number;
+  top_diseases: { name: string; count: number }[];
+  crops: { name: string; count: number }[];
+}
+
+export interface OfficerMapData {
+  points: OfficerMapPoint[];
+  districts: OfficerMapDistrict[];
+  trend: { date: string; count: number }[];
+  priority_cases: OfficerMapPoint[];
+  filter_options: { crops: string[]; diseases: string[] };
+}
+
 export interface AdminCommandStats {
   total_farmers: number;
   total_reports: number;
@@ -419,6 +459,17 @@ export const api = {
     if (officerLng !== undefined) params.append("officer_lng", officerLng.toString());
     params.append("limit", limit.toString());
     return apiFetch<OfficerQueueItem[]>(`/api/officer/queue?${params.toString()}`);
+  },
+
+  getOfficerMapData: (filters: { crop?: string; disease?: string; risk?: string; days?: number; officerLat?: number; officerLng?: number } = {}) => {
+    const params = new URLSearchParams();
+    if (filters.crop) params.set("crop", filters.crop);
+    if (filters.disease) params.set("disease", filters.disease);
+    if (filters.risk) params.set("risk", filters.risk);
+    params.set("days", String(filters.days ?? 30));
+    params.set("officer_lat", String(filters.officerLat ?? 19.7));
+    params.set("officer_lng", String(filters.officerLng ?? 75.7));
+    return apiFetch<OfficerMapData>(`/api/officer/map-data?${params.toString()}`);
   },
 
   submitValidation: (payload: ValidationSubmission) =>

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   api,
   type OfficerDashboardStats,
   type OfficerQueueItem,
 } from "@/lib/api";
-import OfficerMap from "@/components/OfficerMap";
+import OfficerMap, { type OfficerMapFilters } from "@/components/OfficerMap";
+import type { OfficerMapPoint } from "@/lib/api";
 import ChatPanel from "@/components/ChatPanel";
 import GovResourceLinks from "@/components/GovResourceLinks";
 import { useTranslations } from "@/lib/i18n";
@@ -25,6 +26,33 @@ export default function OfficerPage() {
   const [userRole, setUserRole] = useState<"officer" | "admin" | null>(null);
   const [showChat, setShowChat] = useState(false);
   const [chatScanId, setChatScanId] = useState<string | undefined>();
+  const [mapFilters, setMapFilters] = useState<OfficerMapFilters>({ crop: "", disease: "", risk: "", days: 30 });
+
+  const filteredQueueItems = useMemo(() => {
+    const since = Date.now() - mapFilters.days * 24 * 60 * 60 * 1000;
+    return queueItems.filter((item) => {
+      const diseaseMatches = !mapFilters.disease || item.disease_label.toLowerCase().includes(mapFilters.disease.toLowerCase());
+      const cropMatches = !mapFilters.crop || item.crop_name.toLowerCase() === mapFilters.crop.toLowerCase();
+      const riskMatches = !mapFilters.risk || item.risk_level === mapFilters.risk;
+      const districtMatches = !mapFilters.district || item.district === mapFilters.district;
+      const dateMatches = !item.timestamp || new Date(item.timestamp).getTime() >= since;
+      return diseaseMatches && cropMatches && riskMatches && districtMatches && dateMatches;
+    });
+  }, [mapFilters, queueItems]);
+
+  function queueItemForPoint(point: OfficerMapPoint) {
+    return queueItems.find((item) => item.ai_result_id === point.ai_result_id);
+  }
+
+  function handleMapValidate(point: OfficerMapPoint) {
+    const item = queueItemForPoint(point);
+    if (item) setSelectedQueueItem(item);
+  }
+
+  function handleMapChat(point: OfficerMapPoint) {
+    setChatScanId(point.ai_result_id);
+    setShowChat(true);
+  }
 
   function loadData() {
     setLoading(true);
@@ -178,7 +206,13 @@ export default function OfficerPage() {
           Color-coded markers show farm clusters by risk level. Click markers for cluster details.
         </p>
         <div className="rounded-lg overflow-hidden">
-          <OfficerMap officerLat={19.0} officerLng={73.0} />
+          <OfficerMap
+            officerLat={19.0}
+            officerLng={73.0}
+            onFilterChange={setMapFilters}
+            onValidatePoint={handleMapValidate}
+            onChatPoint={handleMapChat}
+          />
         </div>
       </div>
 
@@ -194,7 +228,7 @@ export default function OfficerPage() {
             </p>
           </div>
           <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-4 py-2 rounded-lg border border-emerald-500/20">
-            {queueItems.length} Cases Pending
+            {filteredQueueItems.length} Cases Pending
           </span>
         </div>
 
@@ -212,7 +246,7 @@ export default function OfficerPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {queueItems.slice(0, 10).map((item) => (
+              {filteredQueueItems.slice(0, 10).map((item) => (
                 <tr key={item.ai_result_id} className="hover:bg-white/5 transition-colors duration-200">
                   <td className="py-3 px-4">
                     <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20">

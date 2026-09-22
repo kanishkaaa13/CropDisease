@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { User, AuthResponse } from "./api";
+import { useRouter } from "next/navigation";
+import { SESSION_EXPIRED_EVENT, User } from "./api";
 import { api } from "./api";
 
 interface AuthContextType {
@@ -24,29 +24,75 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const PROTECTED_PATHS = ["/farmer", "/officer", "/admin", "/predict"];
+
+function isProtectedPath(pathname: string) {
+  return PROTECTED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [redirectPath, setRedirectPath] = useState<string>("");
 
   useEffect(() => {
-    // Check for existing token on mount
-    const storedToken = localStorage.getItem("auth_token");
-    const storedUser = localStorage.getItem("auth_user");
-    const storedRedirect = localStorage.getItem("redirect_path");
-    
-    if (storedToken && storedUser) {
+    let cancelled = false;
+
+    const validateStoredToken = async () => {
+      const storedToken = localStorage.getItem("auth_token");
+      const storedRedirect = localStorage.getItem("redirect_path");
+      const validRedirect = storedRedirect && isProtectedPath(storedRedirect) ? storedRedirect : "";
+
+      setRedirectPath(validRedirect);
+
+      if (!storedToken) {
+        if (!cancelled) {
+          setUser(null);
+          setLoading(false);
+        }
+        return;
+      }
+
       setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-    }
-    if (storedRedirect) {
-      setRedirectPath(storedRedirect);
-    }
-    setLoading(false);
+
+      try {
+        const backendUser = await api.getMe();
+        if (!cancelled) {
+          setUser(backendUser);
+          localStorage.setItem("auth_user", JSON.stringify(backendUser));
+        }
+      } catch {
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("auth_user");
+        if (!cancelled) {
+          setToken(null);
+          setUser(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void validateStoredToken();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setToken(null);
+      setUser(null);
+      setLoading(false);
+    };
+
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -56,9 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(response.user);
       localStorage.setItem("auth_token", response.access_token);
       localStorage.setItem("auth_user", JSON.stringify(response.user));
-      
-      // Redirect to stored path or default based on role
-      const targetPath = redirectPath || (response.user.role === "farmer" ? "/farmer" : "/officer");
+
+      const defaultPath = response.user.role === "farmer" ? "/farmer" : "/officer";
+      const targetPath = isProtectedPath(redirectPath) ? redirectPath : defaultPath;
       localStorage.removeItem("redirect_path");
       router.push(targetPath);
     } catch (error) {
@@ -81,8 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(response.user);
       localStorage.setItem("auth_token", response.access_token);
       localStorage.setItem("auth_user", JSON.stringify(response.user));
-      
-      // Redirect to stored path or default based on role
+
       const targetPath = redirectPath || (data.role === "farmer" ? "/farmer" : "/officer");
       localStorage.removeItem("redirect_path");
       router.push(targetPath);

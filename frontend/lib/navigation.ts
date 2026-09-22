@@ -1,9 +1,9 @@
-import { Leaf, Scan, TrendingUp, AlertCircle, FileText, MessageSquare, Layout, CheckSquare, Map, Users, BarChart3 } from "lucide-react";
+import { AlertCircle, BarChart3, CheckSquare, FileText, Layout, Map, MessageSquare, Scan, TrendingUp, Users, type LucideIcon } from "lucide-react";
 
 export interface NavItem {
   label: string;
   href: string;
-  icon: any;
+  icon: LucideIcon;
 }
 
 export const FARMER_NAV: NavItem[] = [

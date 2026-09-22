@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ChevronLeft, ChevronRight, Leaf, LogOut, Menu, X } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { getNavItems, NavItem } from "@/lib/navigation";
-import { Menu, X, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { getNavItems } from "@/lib/navigation";
+
+function getInitials(name: string) {
+  return name.trim().split(/\s+/).map((part) => part[0]).join("").toUpperCase().slice(0, 2);
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -13,103 +17,76 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Load collapsed state from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("sidebar_collapsed");
-    if (saved !== null) {
-      setCollapsed(saved === "true");
-    }
+    if (saved !== null) setCollapsed(saved === "true");
   }, []);
 
-  // Save collapsed state to localStorage
   useEffect(() => {
-    localStorage.setItem("sidebar_collapsed", collapsed.toString());
+    localStorage.setItem("sidebar_collapsed", String(collapsed));
   }, [collapsed]);
 
-  const navItems = user ? getNavItems(user.role) : [];
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
+  useEffect(() => setMobileOpen(false), [pathname]);
 
   if (!user) return null;
 
   return (
     <>
-      {/* Mobile backdrop */}
       {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+        <button
+          type="button"
+          aria-label="Close navigation"
+          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
-      <aside
-        className={`
-          fixed left-0 top-0 h-full bg-white border-r border-neutral-200 z-50
-          transition-all duration-300 ease-in-out
-          ${collapsed ? "w-[72px]" : "w-[240px]"}
-          ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-        `}
+      <button
+        type="button"
+        aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
+        aria-expanded={mobileOpen}
+        className="fixed left-4 top-4 z-50 rounded-lg border border-stone-700 bg-[#202721] p-2 text-stone-200 shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 lg:hidden"
+        onClick={() => setMobileOpen((open) => !open)}
       >
-        {/* Logo */}
-        <div className="h-16 flex items-center px-4 border-b border-neutral-200">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🌿</span>
-            {!collapsed && (
-              <span className="font-bold text-neutral-900 text-lg">
-                Krushi<span className="text-emerald-600">Rakshak</span>
-              </span>
-            )}
-          </div>
+        {mobileOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
+      </button>
+
+      <aside
+        aria-label="Authenticated navigation"
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-stone-700/80 bg-[#202721] text-stone-100 shadow-2xl transition-all duration-200 lg:translate-x-0 ${collapsed ? "lg:w-[72px]" : "lg:w-[240px]"} ${mobileOpen ? "w-[280px] translate-x-0" : "w-[280px] -translate-x-full"}`}
+      >
+        <div className="flex h-20 items-center border-b border-stone-700/80 px-4">
+          <Link href={user.role === "farmer" ? "/farmer" : "/officer"} className="flex min-w-0 items-center gap-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-700 text-emerald-50">
+              <Leaf className="h-5 w-5" aria-hidden="true" />
+            </span>
+            {!collapsed && <span className="truncate text-base font-semibold tracking-tight">Krushi<span className="text-emerald-400">Rakshak</span></span>}
+          </Link>
+          <button type="button" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} className="ml-auto hidden rounded-md p-1.5 text-stone-400 hover:bg-stone-700/60 hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 lg:block" onClick={() => setCollapsed((value) => !value)}>
+            {collapsed ? <ChevronRight className="h-4 w-4" aria-hidden="true" /> : <ChevronLeft className="h-4 w-4" aria-hidden="true" />}
+          </button>
+          <button type="button" aria-label="Close navigation" className="ml-auto rounded-md p-1.5 text-stone-400 hover:bg-stone-700/60 hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 lg:hidden" onClick={() => setMobileOpen(false)}>
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
         </div>
 
-        {/* Collapse button (desktop) */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="absolute right-0 top-20 -mr-3 bg-white border border-neutral-200 rounded-full p-1 hidden lg:flex items-center justify-center shadow-sm hover:bg-neutral-50 transition-colors"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? (
-            <ChevronRight className="w-4 h-4 text-neutral-600" />
-          ) : (
-            <ChevronLeft className="w-4 h-4 text-neutral-600" />
-          )}
-        </button>
-
-        {/* Navigation */}
-        <nav className="flex-1 py-4 px-2 overflow-y-auto">
-          <ul className="space-y-1">
-            {navItems.map((item) => {
+        <nav className="flex-1 overflow-y-auto px-3 py-5" aria-label="Primary">
+          <ul className="space-y-1.5">
+            {getNavItems(user.role).map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-              
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className={`
-                      flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all
-                      focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2
-                      ${isActive
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
-                      }
-                      ${collapsed ? "justify-center" : ""}
-                    `}
+                    title={collapsed ? item.label : undefined}
+                    aria-current={active ? "page" : undefined}
+                    className={`relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 ${collapsed ? "justify-center" : ""} ${active ? "bg-emerald-900/45 text-emerald-200" : "text-stone-400 hover:bg-stone-700/50 hover:text-stone-100"}`}
                     onClick={() => setMobileOpen(false)}
                   >
-                    <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? "text-emerald-600" : "text-neutral-500"}`} />
-                    {!collapsed && <span>{item.label}</span>}
-                    {isActive && !collapsed && (
-                      <div className="absolute left-0 w-1 h-8 bg-emerald-600 rounded-r" />
-                    )}
+                    {active && <span className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r bg-emerald-400" aria-hidden="true" />}
+                    <Icon className={`h-5 w-5 shrink-0 ${active ? "text-emerald-300" : "text-stone-500"}`} aria-hidden="true" />
+                    {!collapsed && <span className="truncate">{item.label}</span>}
                   </Link>
                 </li>
               );
@@ -117,39 +94,24 @@ export default function Sidebar() {
           </ul>
         </nav>
 
-        {/* User section */}
-        <div className="p-4 border-t border-neutral-200">
+        <div className="border-t border-stone-700/80 p-4">
           <div className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}>
-            <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-medium text-sm flex-shrink-0">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-sm font-semibold text-emerald-50" aria-hidden="true">
               {getInitials(user.full_name)}
             </div>
             {!collapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-neutral-900 truncate">{user.full_name}</p>
-                <p className="text-xs text-neutral-500 capitalize">{user.role}</p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-stone-100">{user.full_name}</p>
+                <p className="truncate text-xs capitalize text-stone-500">{user.role}</p>
               </div>
             )}
           </div>
-          {!collapsed && (
-            <button
-              onClick={logout}
-              className="mt-3 w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Sign out</span>
-            </button>
-          )}
+          <button type="button" title={collapsed ? "Sign out" : undefined} aria-label="Sign out" onClick={logout} className={`mt-4 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-stone-400 transition-colors hover:bg-stone-700/50 hover:text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-400 ${collapsed ? "justify-center" : ""}`}>
+            <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {!collapsed && <span>Sign out</span>}
+          </button>
         </div>
       </aside>
-
-      {/* Mobile menu button */}
-      <button
-        onClick={() => setMobileOpen(!mobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white border border-neutral-200 rounded-lg shadow-sm hover:bg-neutral-50 transition-colors"
-        aria-label="Toggle menu"
-      >
-        {mobileOpen ? <X className="w-5 h-5 text-neutral-600" /> : <Menu className="w-5 h-5 text-neutral-600" />}
-      </button>
     </>
   );
 }
